@@ -15,21 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MyWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MyGUI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MyWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MyGUI.h">
+    <ClInclude Include="MyWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MyWindow.h">
+    <ClInclude Include="MyGUI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
