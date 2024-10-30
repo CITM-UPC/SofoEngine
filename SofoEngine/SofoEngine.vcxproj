@@ -133,9 +133,11 @@
     <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="BufferObject.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="ConfigurationWindow.cpp" />
     <ClCompile Include="GraphicObject.cpp" />
     <ClCompile Include="HierarchyWindow.cpp" />
     <ClCompile Include="Image.cpp" />
+    <ClCompile Include="InspectorWindow.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MyGUI.cpp" />
@@ -149,10 +151,12 @@
     <ClInclude Include="BoundingBox.h" />
     <ClInclude Include="BufferObject.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="ConfigurationWindow.h" />
     <ClInclude Include="GraphicObject.h" />
     <ClInclude Include="GUIwindow.h" />
     <ClInclude Include="HierarchyWindow.h" />
     <ClInclude Include="Image.h" />
+    <ClInclude Include="InspectorWindow.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MyGUI.h" />
     <ClInclude Include="MyWindow.h" />

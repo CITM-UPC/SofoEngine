@@ -43,7 +43,7 @@ void HierarchyWindow::RecurseShowChildren(GraphicObject& parent)
 		if (childGO.children().empty())
 			treeFlags |= ImGuiTreeNodeFlags_Leaf;
 
-		if (childGO == Scene::get().selectedGO)
+		if (Scene::get().selectedGO != nullptr && childGO == *Scene::get().selectedGO)
 		{
 			treeFlags |= ImGuiTreeNodeFlags_Selected;
 		}
@@ -54,8 +54,8 @@ void HierarchyWindow::RecurseShowChildren(GraphicObject& parent)
 
 		if (ImGui::IsItemClicked(0) && !ImGui::IsItemToggledOpen())
 		{
-			Scene::get().setSelectedGO(childGO);
-			std::cout << "Selected GameObject: " << childGO.getName() << Scene::get().selectedGO.getName() << std::endl;
+			Scene::get().selectedGO = &childGO;
+			std::cout << "Selected GameObject: " << childGO.getName() << Scene::get().selectedGO->getName() << std::endl;
 		}
 
 		if (isOpen)

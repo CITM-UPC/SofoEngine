@@ -4,7 +4,6 @@
 
 void AboutWindow::draw()
 {
-	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5, 0.9));
 	if (ImGui::Begin(name.c_str()))
 	{
 		ImGui::Text("SofoEngine by Sofia Liles.");

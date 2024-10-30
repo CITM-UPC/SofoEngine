@@ -15,7 +15,7 @@ class GraphicObject :  public TreeExt<GraphicObject> {
 	glm::u8vec3 _color = glm::u8vec3(255,255,255);
 	Texture _texture;
 	std::shared_ptr<Mesh> _mesh_ptr;
-	std::string _name;
+	std::string _name = "";
 
 public:
 	const auto& transform() const { return _transform; }
@@ -34,7 +34,7 @@ public:
 
 	BoundingBox worldBoundingBox() const;
 
-	void setTextureImage(const std::shared_ptr<Image>& img_ptr) { _texture.setImage(img_ptr); }
+	void setTextureImage(std::shared_ptr<Image> img_ptr) { _texture.setImage(img_ptr); }
 	void setMesh(const std::shared_ptr<Mesh>& mesh_ptr) { _mesh_ptr = mesh_ptr; }
 	void setName(const std::string& name) { _name = name; }
 

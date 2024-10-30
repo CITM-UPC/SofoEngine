@@ -63,3 +63,50 @@ void Mesh::draw() const {
 	if (_normalBuffer.id()) glDisableClientState(GL_NORMAL_ARRAY);
 	if (_texCoordBuffer.id()) glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
+
+void Mesh::drawTriangleNormals(float normalLength) const
+{
+	glBegin(GL_LINES);
+	glColor3f(1.0f, 0.0f, 0.0f);
+
+	for (size_t i = 0; i < _indices.size(); i += 3) {
+		glm::vec3 v0 = _vertices[_indices[i]];
+		glm::vec3 v1 = _vertices[_indices[i + 1]];
+		glm::vec3 v2 = _vertices[_indices[i + 2]];
+
+		glm::vec3 center = (v0 + v1 + v2) / 3.0f;
+
+		glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
+
+		glVertex3fv(&center[0]);
+		glm::vec3 end = center + normal * normalLength;
+		glVertex3fv(&end[0]);
+	}
+	glEnd();
+}
+
+void Mesh::drawFaceNormals(float normalLength) const
+{
+	glBegin(GL_LINES);
+	glColor3f(0.0f, 1.0f, 0.0f);
+
+	for (size_t i = 0; i < _indices.size(); i += 3) {
+		glm::vec3 v0 = _vertices[_indices[i]];
+		glm::vec3 v1 = _vertices[_indices[i + 1]];
+		glm::vec3 v2 = _vertices[_indices[i + 2]];
+
+		glm::vec3 n0 = glm::normalize(v0);
+		glm::vec3 n1 = glm::normalize(v1);
+		glm::vec3 n2 = glm::normalize(v2);
+
+		glVertex3fv(&v0[0]);
+		glVertex3fv(&(v0 + n0 * normalLength)[0]);
+
+		glVertex3fv(&v1[0]);
+		glVertex3fv(&(v1 + n1 * normalLength)[0]);
+
+		glVertex3fv(&v2[0]);
+		glVertex3fv(&(v2 + n2 * normalLength)[0]);
+	}
+	glEnd();
+}

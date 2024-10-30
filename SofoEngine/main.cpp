@@ -37,8 +37,6 @@ static const ivec2 WINDOW_SIZE(1280, 720);
 static const auto FPS = 60;
 static const auto FRAME_DT = 1.0s / FPS;
 
-static bool paused = true;
-
 
 static std::string generateRandomNameFromBase(const std::string& baseName, size_t numDigits = 4) {
 	std::default_random_engine rng(std::random_device{}());
@@ -213,7 +211,7 @@ static std::shared_ptr<Image> loadImageFromFile(const std::string& filePath) {
 
 	void* data = ilGetData();
 
-	auto image = std::make_shared<Image>();
+	std::shared_ptr<Image> image = std::make_shared<Image>();
 	image->load(width, height, channels, data);
 
 	ilDeleteImages(1, &imageID);
@@ -471,7 +469,11 @@ int main(int argc, char** argv) {
 					}
 				}
 				else if (file.extension() == ".png") {
-					Scene::get().selectedGO.setTextureImage(loadImageFromFile(file.string()));
+					std::shared_ptr<Image> img = loadImageFromFile(file.string());
+
+					if(Scene::get().selectedGO != nullptr)
+						Scene::get().selectedGO->setTextureImage(img);
+
 					std::cout << "Texture Filepath: " << file.string() << std::endl;
 				}
 				break;

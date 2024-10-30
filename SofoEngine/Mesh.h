@@ -29,4 +29,7 @@ public:
 	void loadColors(const glm::u8vec3* colors);
 	void draw() const;
 
+	void drawTriangleNormals(float normalLength = 0.1f) const;
+	void drawFaceNormals(float normalLength = 0.1f) const;
+
 };

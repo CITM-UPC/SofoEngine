@@ -6,6 +6,8 @@
 #include <imgui_impl_opengl3.h>
 #include "HierarchyWindow.h"
 #include "AboutWindow.h"
+#include "ConfigurationWindow.h"
+#include "InspectorWindow.h"
 
 MyGUI::MyGUI(SDL_Window* window, void* context) {
     IMGUI_CHECKVERSION();
@@ -19,6 +21,8 @@ MyGUI::MyGUI(SDL_Window* window, void* context) {
 
 	GUIwindows.push_back(new HierarchyWindow("Hierarchy"));
 	GUIwindows.push_back(new AboutWindow("About"));
+	GUIwindows.push_back(new ConfigurationWindow("Configuration"));
+	GUIwindows.push_back(new InspectorWindow("Inspector"));
 }
 
 MyGUI::~MyGUI() {

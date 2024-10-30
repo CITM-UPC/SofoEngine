@@ -16,12 +16,9 @@ public:
     Scene(Scene&&) = delete;
     Scene& operator=(Scene&&) = delete;
 
-    const GraphicObject& getSelectedGO() { return selectedGO; }
-    void setSelectedGO(GraphicObject& go) { selectedGO = go; }
-
     Camera camera;
     GraphicObject scene;
-    GraphicObject selectedGO;
+    GraphicObject* selectedGO;
 
 private:
     Scene() = default;

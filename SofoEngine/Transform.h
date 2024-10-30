@@ -1,6 +1,8 @@
 #pragma once
 
 #include "types.h"
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 
 class Transform {
 
@@ -14,9 +16,8 @@ class Transform {
 		};
 	};
 
-	// Variables para almacenar los ángulos acumulativos de rotación
-	double yaw = 0.0;    // Rotación acumulada en el eje Y
-	double pitch = 0.0;  // Rotación acumulada en el eje X
+	double yaw = 0.0;
+	double pitch = 0.0;
 
 public:
 	const auto& mat() const { return _mat; }
@@ -37,6 +38,19 @@ public:
 	void rotateYawPitch(double deltaYaw, double deltaPitch);
 
 	void lookAt(double yawOffset, double pitchOffset);
+
+	glm::vec3 scale() const {
+		return glm::vec3(glm::length(_left), glm::length(_up), glm::length(_fwd));
+	}
+
+	glm::quat rotation() const {
+		glm::mat3 rotationMatrix(
+			glm::normalize(_left),
+			glm::normalize(_up),
+			glm::normalize(_fwd)
+		);
+		return glm::quat_cast(rotationMatrix);
+	}
 
 	Transform operator*(const mat4& other) { return Transform(_mat * other); }
 	Transform operator*(const Transform& other) { return Transform(_mat * other._mat); }
