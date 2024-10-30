@@ -4,6 +4,7 @@
 		"glm",
 		"glew",
 		"sdl2",
+		"freeglut",
 		{
 			"name": "imgui",
 			"features": [ "sdl2-binding", "opengl3-binding", "docking-experimental" ]
