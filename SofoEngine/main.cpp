@@ -11,6 +11,17 @@
 #include "Texture.h"
 #include "Mesh.h"
 #include "GraphicObject.h"
+#include <memory>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include "Mesh.h"
+#include <IL/il.h>
+#include "Image.h"
+#include <locale>
+#include <codecvt>
+#include <IL/ilu.h>
+#include <IL/ilut.h>
 
 using namespace std;
 
@@ -62,6 +73,168 @@ static void drawBoundingBox(const BoundingBox& bbox) {
 	drawWiredQuad(bbox.v001(), bbox.v011(), bbox.v111(), bbox.v101());
 
 }
+
+static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& filePath) {
+	// Inicializa el importador de Assimp
+	Assimp::Importer importer;
+
+	// Carga la escena con todas las mallas
+	const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs);
+
+	if (!scene || !scene->HasMeshes()) {
+		throw std::runtime_error("Error al cargar el archivo de modelo: " + filePath);
+	}
+
+	// Vector para almacenar todas las mallas
+	std::vector<std::shared_ptr<Mesh>> meshes;
+
+	// Recorre cada malla en la escena
+	for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
+		const aiMesh* aiMesh = scene->mMeshes[meshIndex];
+
+		// Extrae vértices
+		std::vector<glm::vec3> vertices(aiMesh->mNumVertices);
+		for (size_t i = 0; i < aiMesh->mNumVertices; ++i) {
+			vertices[i] = glm::vec3(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
+		}
+
+		// Extrae índices
+		std::vector<unsigned int> indices;
+		for (size_t i = 0; i < aiMesh->mNumFaces; ++i) {
+			const aiFace& face = aiMesh->mFaces[i];
+			for (size_t j = 0; j < face.mNumIndices; ++j) {
+				indices.push_back(face.mIndices[j]);
+			}
+		}
+
+		// Extrae coordenadas de textura (si existen)
+		std::vector<glm::vec2> texCoords;
+		if (aiMesh->HasTextureCoords(0)) {
+			texCoords.resize(aiMesh->mNumVertices);
+			for (size_t i = 0; i < aiMesh->mNumVertices; ++i) {
+				texCoords[i] = glm::vec2(aiMesh->mTextureCoords[0][i].x, aiMesh->mTextureCoords[0][i].y);
+			}
+		}
+
+		// Extrae normales (si existen)
+		std::vector<glm::vec3> normals;
+		if (aiMesh->HasNormals()) {
+			normals.resize(aiMesh->mNumVertices);
+			for (size_t i = 0; i < aiMesh->mNumVertices; ++i) {
+				normals[i] = glm::vec3(aiMesh->mNormals[i].x, aiMesh->mNormals[i].y, aiMesh->mNormals[i].z);
+			}
+		}
+
+		// Extrae colores (si existen en el primer set)
+		std::vector<glm::u8vec3> colors;
+		if (aiMesh->HasVertexColors(0)) {
+			colors.resize(aiMesh->mNumVertices);
+			for (size_t i = 0; i < aiMesh->mNumVertices; ++i) {
+				colors[i] = glm::u8vec3(
+					static_cast<unsigned char>(aiMesh->mColors[0][i].r * 255),
+					static_cast<unsigned char>(aiMesh->mColors[0][i].g * 255),
+					static_cast<unsigned char>(aiMesh->mColors[0][i].b * 255)
+				);
+			}
+		}
+
+		// Crea una instancia de Mesh y carga los datos
+		auto mesh = std::make_shared<Mesh>();
+		mesh->load(vertices.data(), vertices.size(), indices.data(), indices.size());
+
+		if (!texCoords.empty()) {
+			mesh->loadTexCoords(texCoords.data());
+		}
+
+		if (!normals.empty()) {
+			mesh->loadNormals(normals.data());
+		}
+
+		if (!colors.empty()) {
+			mesh->loadColors(colors.data());
+		}
+
+		// Añade la malla al vector
+		meshes.push_back(mesh);
+	}
+
+	return meshes;
+}
+
+static std::wstring stringToWString(const std::string& str) {
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	return converter.from_bytes(str);
+}
+
+
+std::string wstringToString(const wchar_t* wstr) {
+	if (!wstr) return "Error desconocido";  // Retorna mensaje predeterminado si el puntero es nulo
+
+	size_t len = wcslen(wstr);
+	size_t converted = 0;
+	std::string result(len, '\0');
+
+	// Utiliza wcstombs_s para una conversión segura
+	wcstombs_s(&converted, &result[0], len + 1, wstr, len);
+
+	return result.empty() ? "Error desconocido" : result;  // Verifica si la conversión resultó vacía
+}
+
+static std::shared_ptr<Image> loadImageFromFile(const std::string& filePath) {
+	// Inicializa DevIL si no se ha hecho antes
+	static bool isDevILInitialized = false;
+	if (!isDevILInitialized) {
+		ilInit();
+		isDevILInitialized = true;
+	}
+
+	// Genera un ID de imagen para DevIL y enlaza la imagen
+	ILuint imageID;
+	ilGenImages(1, &imageID);
+	ilBindImage(imageID);
+
+	// Carga la imagen desde el archivo
+	if (!ilLoadImage((const wchar_t*)filePath.c_str())) {
+		ILenum error = ilGetError();  // Obtiene el código de error de DevIL
+		ilDeleteImages(1, &imageID);  // Limpia el ID de imagen si falla
+
+		// Verifica que el puntero devuelto por iluErrorString no sea nulo antes de convertirlo
+		const wchar_t* errorStr = iluErrorString(error);
+		std::string errorMessage = wstringToString(errorStr);
+
+		// Asegúrate de que errorMessage no esté vacío
+		if (errorMessage.empty()) {
+			errorMessage = "Error desconocido al cargar la imagen.";
+		}
+
+		std::cout << "Error al cargar la imagen: " << filePath << "\nDetalles del error: " << errorMessage << std::endl;
+	}
+
+	// Obtiene las dimensiones y el formato de la imagen
+	int width = ilGetInteger(IL_IMAGE_WIDTH);
+	int height = ilGetInteger(IL_IMAGE_HEIGHT);
+	int channels = ilGetInteger(IL_IMAGE_CHANNELS);
+	ILenum format = (channels == 4) ? IL_RGBA : IL_RGB;
+
+	// Convierte la imagen al formato adecuado (RGB o RGBA)
+	if (!ilConvertImage(format, IL_UNSIGNED_BYTE)) {
+		ilDeleteImages(1, &imageID);
+		throw std::runtime_error("Error al convertir la imagen: " + filePath);
+	}
+
+	// Obtiene un puntero a los datos de la imagen
+	void* data = ilGetData();
+
+	// Crea una instancia de Image y carga los datos
+	auto image = std::make_shared<Image>();
+	image->load(width, height, channels, data);
+
+	// Limpia el ID de imagen en DevIL
+	ilDeleteImages(1, &imageID);
+
+	return image;
+}
+
 
 static auto MakeTriangleMesh(double size) {
 	const glm::vec3 vertices[] = { glm::vec3(-size, -size, 0), glm::vec3(size, -size, 0), glm::vec3(0, size, 0) };
@@ -262,6 +435,11 @@ static void initScene() {
 }
 
 int main(int argc, char** argv) {
+
+	ilInit();
+	iluInit();
+	ilutInit();
+
 	MyWindow window("Sofo Engine", WINDOW_SIZE.x, WINDOW_SIZE.y);
 	MyGUI gui(window.windowPtr(), window.contextPtr());
 
@@ -276,6 +454,16 @@ int main(int argc, char** argv) {
 	bool running = true;
 	const Uint8* keyState = SDL_GetKeyboardState(NULL);
 	SDL_Event e;
+
+	auto& bakerHouse = scene.emplaceChild();
+	std::shared_ptr<Image> bakerHouseImage = loadImageFromFile("Assets/Baker_house.png");
+	for (auto& mesh : loadMeshesFromFile("Assets/BakerHouse.fbx"))
+	{
+		auto& part = bakerHouse.emplaceChild();
+		part.setMesh(mesh);
+		part.setTextureImage(bakerHouseImage);
+		bakerHouse.emplaceChild(part);
+	}
 
 	while (running) {
 		const auto t0 = hrclock::now();

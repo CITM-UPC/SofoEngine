@@ -5,6 +5,8 @@
 		"glew",
 		"sdl2",
 		"freeglut",
+		"devil",
+		"assimp",
 		{
 			"name": "imgui",
 			"features": [ "sdl2-binding", "opengl3-binding", "docking-experimental" ]
