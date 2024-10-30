@@ -1,6 +1,8 @@
 #pragma once
 
 #include "MyWindow.h"
+#include "vector"
+#include "GUIwindow.h"
 
 class MyGUI : public IEventProcessor
 {
@@ -11,7 +13,11 @@ public:
 	MyGUI& operator=(const MyGUI&) = delete;
 	~MyGUI();
 	void render();
+	void Begin();
+	void End();
 
 	void processEvent(const SDL_Event& event) override;
+
+	std::vector<GUIwindow*> GUIwindows;
 
 };

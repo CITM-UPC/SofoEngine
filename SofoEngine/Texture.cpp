@@ -27,7 +27,7 @@ static auto GLMinFilter(Texture::Filters filter) {
 }
 
 void Texture::bind() const {
-	glBindTexture(GL_TEXTURE_2D, _img_ptr->id());
+	_img_ptr->bind();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GLWrapMode(wrapMode));
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GLWrapMode(wrapMode));
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GLMinFilter(filter));

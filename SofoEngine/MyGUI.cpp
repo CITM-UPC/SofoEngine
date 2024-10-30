@@ -4,6 +4,8 @@
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_opengl3.h>
+#include "HierarchyWindow.h"
+#include "AboutWindow.h"
 
 MyGUI::MyGUI(SDL_Window* window, void* context) {
     IMGUI_CHECKVERSION();
@@ -14,6 +16,9 @@ MyGUI::MyGUI(SDL_Window* window, void* context) {
     ImGui::StyleColorsDark();
     ImGui_ImplSDL2_InitForOpenGL(window, context);
     ImGui_ImplOpenGL3_Init();
+
+	GUIwindows.push_back(new HierarchyWindow("Hierarchy"));
+	GUIwindows.push_back(new AboutWindow("About"));
 }
 
 MyGUI::~MyGUI() {
@@ -22,11 +27,23 @@ MyGUI::~MyGUI() {
 	ImGui::DestroyContext();
 }
 
-void MyGUI::render() {
+void MyGUI::render()
+{
+	for (auto& window : GUIwindows)
+	{
+		window->draw();
+	}
+}
+
+void MyGUI::Begin()
+{
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
-	ImGui::ShowDemoWindow();
+}
+
+void MyGUI::End()
+{
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

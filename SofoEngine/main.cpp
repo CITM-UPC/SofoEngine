@@ -22,6 +22,9 @@
 #include <codecvt>
 #include <IL/ilu.h>
 #include <IL/ilut.h>
+#include <filesystem>
+#include "Scene.h"
+#include <random>
 
 using namespace std;
 
@@ -35,8 +38,18 @@ static const auto FPS = 60;
 static const auto FRAME_DT = 1.0s / FPS;
 
 static bool paused = true;
-static Camera camera;
-static GraphicObject scene;
+
+
+static std::string generateRandomNameFromBase(const std::string& baseName, size_t numDigits = 4) {
+	std::default_random_engine rng(std::random_device{}());
+	std::uniform_int_distribution<> dist(0, 9);
+
+	std::string randomName = baseName + "_";
+	for (size_t i = 0; i < numDigits; ++i) {
+		randomName += std::to_string(dist(rng));
+	}
+	return randomName;
+}
 
 static void drawAxis(double size) {
 	glLineWidth(2.0);
@@ -75,30 +88,24 @@ static void drawBoundingBox(const BoundingBox& bbox) {
 }
 
 static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& filePath) {
-	// Inicializa el importador de Assimp
 	Assimp::Importer importer;
 
-	// Carga la escena con todas las mallas
 	const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs);
 
 	if (!scene || !scene->HasMeshes()) {
-		throw std::runtime_error("Error al cargar el archivo de modelo: " + filePath);
+		throw std::runtime_error("Issue loading the model: " + filePath);
 	}
 
-	// Vector para almacenar todas las mallas
 	std::vector<std::shared_ptr<Mesh>> meshes;
 
-	// Recorre cada malla en la escena
 	for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
 		const aiMesh* aiMesh = scene->mMeshes[meshIndex];
 
-		// Extrae vértices
 		std::vector<glm::vec3> vertices(aiMesh->mNumVertices);
 		for (size_t i = 0; i < aiMesh->mNumVertices; ++i) {
 			vertices[i] = glm::vec3(aiMesh->mVertices[i].x, aiMesh->mVertices[i].y, aiMesh->mVertices[i].z);
 		}
 
-		// Extrae índices
 		std::vector<unsigned int> indices;
 		for (size_t i = 0; i < aiMesh->mNumFaces; ++i) {
 			const aiFace& face = aiMesh->mFaces[i];
@@ -107,7 +114,6 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 			}
 		}
 
-		// Extrae coordenadas de textura (si existen)
 		std::vector<glm::vec2> texCoords;
 		if (aiMesh->HasTextureCoords(0)) {
 			texCoords.resize(aiMesh->mNumVertices);
@@ -116,7 +122,6 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 			}
 		}
 
-		// Extrae normales (si existen)
 		std::vector<glm::vec3> normals;
 		if (aiMesh->HasNormals()) {
 			normals.resize(aiMesh->mNumVertices);
@@ -125,7 +130,6 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 			}
 		}
 
-		// Extrae colores (si existen en el primer set)
 		std::vector<glm::u8vec3> colors;
 		if (aiMesh->HasVertexColors(0)) {
 			colors.resize(aiMesh->mNumVertices);
@@ -138,7 +142,6 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 			}
 		}
 
-		// Crea una instancia de Mesh y carga los datos
 		auto mesh = std::make_shared<Mesh>();
 		mesh->load(vertices.data(), vertices.size(), indices.data(), indices.size());
 
@@ -154,82 +157,65 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 			mesh->loadColors(colors.data());
 		}
 
-		// Añade la malla al vector
 		meshes.push_back(mesh);
 	}
 
 	return meshes;
 }
 
-static std::wstring stringToWString(const std::string& str) {
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-	return converter.from_bytes(str);
-}
-
-
-std::string wstringToString(const wchar_t* wstr) {
-	if (!wstr) return "Error desconocido";  // Retorna mensaje predeterminado si el puntero es nulo
+static std::string wstringToString(const wchar_t* wstr) {
+	if (!wstr) return "Unknown error";
 
 	size_t len = wcslen(wstr);
 	size_t converted = 0;
 	std::string result(len, '\0');
 
-	// Utiliza wcstombs_s para una conversión segura
 	wcstombs_s(&converted, &result[0], len + 1, wstr, len);
 
-	return result.empty() ? "Error desconocido" : result;  // Verifica si la conversión resultó vacía
+	return result.empty() ? "Unknown error" : result;
 }
 
 static std::shared_ptr<Image> loadImageFromFile(const std::string& filePath) {
-	// Inicializa DevIL si no se ha hecho antes
 	static bool isDevILInitialized = false;
 	if (!isDevILInitialized) {
 		ilInit();
 		isDevILInitialized = true;
 	}
 
-	// Genera un ID de imagen para DevIL y enlaza la imagen
 	ILuint imageID;
 	ilGenImages(1, &imageID);
 	ilBindImage(imageID);
 
-	// Carga la imagen desde el archivo
 	if (!ilLoadImage((const wchar_t*)filePath.c_str())) {
-		ILenum error = ilGetError();  // Obtiene el código de error de DevIL
-		ilDeleteImages(1, &imageID);  // Limpia el ID de imagen si falla
+		ILenum error = ilGetError();
+		ilDeleteImages(1, &imageID);
 
-		// Verifica que el puntero devuelto por iluErrorString no sea nulo antes de convertirlo
 		const wchar_t* errorStr = iluErrorString(error);
 		std::string errorMessage = wstringToString(errorStr);
 
-		// Asegúrate de que errorMessage no esté vacío
 		if (errorMessage.empty()) {
-			errorMessage = "Error desconocido al cargar la imagen.";
+			errorMessage = "Unknown error while loading the image.";
 		}
 
-		std::cout << "Error al cargar la imagen: " << filePath << "\nDetalles del error: " << errorMessage << std::endl;
+		std::cout << "Error while loading the image: " << filePath << "\nError details: " << errorMessage << std::endl;
 	}
 
-	// Obtiene las dimensiones y el formato de la imagen
 	int width = ilGetInteger(IL_IMAGE_WIDTH);
 	int height = ilGetInteger(IL_IMAGE_HEIGHT);
 	int channels = ilGetInteger(IL_IMAGE_CHANNELS);
 	ILenum format = (channels == 4) ? IL_RGBA : IL_RGB;
+	std::cout << "Image loaded width: " << width << " Height: " << height << " Channels: " << channels << std::endl;
 
-	// Convierte la imagen al formato adecuado (RGB o RGBA)
 	if (!ilConvertImage(format, IL_UNSIGNED_BYTE)) {
 		ilDeleteImages(1, &imageID);
-		throw std::runtime_error("Error al convertir la imagen: " + filePath);
+		throw std::runtime_error("Error converting the image: " + filePath);
 	}
 
-	// Obtiene un puntero a los datos de la imagen
 	void* data = ilGetData();
 
-	// Crea una instancia de Image y carga los datos
 	auto image = std::make_shared<Image>();
 	image->load(width, height, channels, data);
 
-	// Limpia el ID de imagen en DevIL
 	ilDeleteImages(1, &imageID);
 
 	return image;
@@ -328,14 +314,14 @@ static void display_func() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixd(&camera.view()[0][0]);
+	glLoadMatrixd(&Scene::get().camera.view()[0][0]);
 
 	drawFloorGrid(16, 0.25);
-	scene.draw();
+	Scene::get().scene.draw();
 
 	glColor3ub(255, 255, 255);
-	drawDebugInfoForGraphicObject(scene);
-	drawWorldDebugInfoForGraphicObject(scene);
+	drawDebugInfoForGraphicObject(Scene::get().scene);
+	drawWorldDebugInfoForGraphicObject(Scene::get().scene);
 
 	//glutSwapBuffers();
 }
@@ -360,9 +346,9 @@ static void init_opengl() {
 
 static void reshape_func(int width, int height) {
 	glViewport(0, 0, width, height);
-	camera.aspect = static_cast<double>(width) / height;
+	Scene::get().camera.aspect = static_cast<double>(width) / height;
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixd(&camera.projection()[0][0]);
+	glLoadMatrixd(&Scene::get().camera.projection()[0][0]);
 }
 
 const double moveSpeed = 0.1;
@@ -379,49 +365,39 @@ static void camera_func(Transform& cameraTransform, const Uint8* keyState, int m
 			firstMouse = false;
 		}
 
-		// Calcula el delta del ratón
 		float deltaX = (mouseX - lastMouseX) * mouseSensitivity;
 		float deltaY = (mouseY - lastMouseY) * mouseSensitivity;
 
-		// Actualiza el último estado del ratón
 		lastMouseX = mouseX;
 		lastMouseY = mouseY;
 
-		// Rota la cámara con los desplazamientos de yaw y pitch
 		cameraTransform.rotateYawPitch(-deltaX, deltaY);
 
-		// Movimiento de la cámara con WASD
 		if (keyState[SDL_SCANCODE_W]) cameraTransform.translate(cameraTransform.fwd() * -moveSpeed);
 		if (keyState[SDL_SCANCODE_S]) cameraTransform.translate(cameraTransform.fwd() * moveSpeed);
 		if (keyState[SDL_SCANCODE_A]) cameraTransform.translate(cameraTransform.left() * -moveSpeed);
 		if (keyState[SDL_SCANCODE_D]) cameraTransform.translate(cameraTransform.left() * moveSpeed);
 	}
 	else {
-		firstMouse = true;  // Reinicia el primer movimiento del ratón al soltar el clic derecho
-	}
-}
-
-static void idle_func() {
-	if (!paused) {
-		//animate triangles
-		scene.children().front().transform().rotate(0.0001, vec3(0, 0, 1));
-		scene.children().front().children().front().transform().rotate(0.0001, vec3(0, 0, 1));
-		scene.children().front().children().front().children().front().transform().rotate(0.0001, vec3(0, 0, 1));
+		firstMouse = true;
 	}
 }
 
 static void initScene() {
-	auto& triangle = scene.emplaceChild();
+	auto& triangle = Scene::get().scene.emplaceChild();
 	triangle.transform().pos() = vec3(0, 0, 0);
 	triangle.color() = glm::u8vec3(255, 0, 0);
+	triangle.setName("triangle");
 
 	auto& child_textured_triangle = triangle.emplaceChild();
 	child_textured_triangle.transform().pos() = vec3(2, 0, 0);
 	child_textured_triangle.color() = glm::u8vec3(0, 255, 0);
+	child_textured_triangle.setName("textured_triangle");
 
 	auto& child_textured_quad = child_textured_triangle.emplaceChild();
 	child_textured_quad.transform().pos() = vec3(2, 0, 0);
 	child_textured_quad.color() = glm::u8vec3(0, 0, 255);
+	child_textured_quad.setName("child_textured_quad");
 
 	auto triangle_mesh = MakeTriangleMesh(0.5);
 	auto quad_mesh = MakeQuadMesh(0.5);
@@ -446,8 +422,9 @@ int main(int argc, char** argv) {
 	init_opengl();
 
 	// Init camera
-	camera.transform().pos() = vec3(0, 1, 4);
-	camera.transform().rotate(glm::radians(180.0), vec3(0, 1, 0));
+	Scene::get().camera.transform().pos() = vec3(0, 1, 4);
+	Scene::get().camera.transform().rotate(glm::radians(180.0), vec3(0, 1, 0));
+	Scene::get().scene.setName("Scene");
 
 	initScene();
 
@@ -455,22 +432,13 @@ int main(int argc, char** argv) {
 	const Uint8* keyState = SDL_GetKeyboardState(NULL);
 	SDL_Event e;
 
-	auto& bakerHouse = scene.emplaceChild();
-	std::shared_ptr<Image> bakerHouseImage = loadImageFromFile("Assets/Baker_house.png");
-	for (auto& mesh : loadMeshesFromFile("Assets/BakerHouse.fbx"))
-	{
-		auto& part = bakerHouse.emplaceChild();
-		part.setMesh(mesh);
-		part.setTextureImage(bakerHouseImage);
-		bakerHouse.emplaceChild(part);
-	}
-
 	while (running) {
 		const auto t0 = hrclock::now();
 		display_func();
-		idle_func();
 		reshape_func(WINDOW_SIZE.x, WINDOW_SIZE.y);
+		gui.Begin();
 		gui.render();
+		gui.End();
 		window.swapBuffers();
 		const auto t1 = hrclock::now();
 		const auto dt = t1 - t0;
@@ -487,41 +455,30 @@ int main(int argc, char** argv) {
 			case SDL_QUIT:
 				running = false;
 				break;
-			//case SDL_DROPFILE:
-			//	dropped_filePath = e.drop.file;
-			//	extension = getFileExtension(dropped_filePath);
+			case SDL_DROPFILE:
+				
+				std::filesystem::path file = e.drop.file;
 
-			//	if (extension == "obj" || extension == "fbx" || extension == "dae") {
-			//		mesh->LoadFile(dropped_filePath);
-			//		GameObject go;
-			//		go.AddComponent<MeshLoader>()->SetMesh(mesh);
-			//		go.setMesh(mesh);
-			//		scene.emplaceChild(go);
-			//	}
-			//	else if (extension == "png" || extension == "jpg" || extension == "bmp") {
-			//		int mouseX, mouseY;
-			//		SDL_GetMouseState(&mouseX, &mouseY);
-			//		for (auto& child : scene.children()) {
-			//			if (isMouseOverGameObject(child, mouseX, mouseY)) {
-			//				imageTexture->LoadTexture(dropped_filePath);
-			//				texture->setImage(imageTexture);
-			//				child.GetComponent<MeshLoader>()->GetMesh()->deleteCheckerTexture();
-			//				child.GetComponent<MeshLoader>()->SetImage(imageTexture);
-			//				child.GetComponent<MeshLoader>()->SetTexture(texture);
-			//			}
-			//		}
-
-			//	}
-			//	else {
-			//		std::cerr << "Unsupported file extension: " << extension << std::endl;
-			//	}
-			//	SDL_free(dropped_filePath);
-			//	//Hasta aquí
-			//	break;
+				if (file.extension() == ".obj" || file.extension() == ".fbx") {
+					auto& child = Scene::get().scene.emplaceChild();
+					child.setName(generateRandomNameFromBase(file.filename().string()));
+					for (auto& mesh : loadMeshesFromFile(file.string()))
+					{
+						auto& part = child.emplaceChild();
+						part.setMesh(mesh);
+						//part.setTextureImage(loadImageFromFile("Assets/Baker_house.png"));
+						part.setName(generateRandomNameFromBase(file.filename().string()));
+					}
+				}
+				else if (file.extension() == ".png") {
+					Scene::get().selectedGO.setTextureImage(loadImageFromFile(file.string()));
+					std::cout << "Texture Filepath: " << file.string() << std::endl;
+				}
+				break;
 			}
 		}
 
-		camera_func(camera.transform(), keyState, mouseX, mouseY, mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT));
+		camera_func(Scene::get().camera.transform(), keyState, mouseX, mouseY, mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT));
 	}
 
 	return 0;
