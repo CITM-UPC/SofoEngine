@@ -14,6 +14,10 @@ class Transform {
 		};
 	};
 
+	// Variables para almacenar los ángulos acumulativos de rotación
+	double yaw = 0.0;    // Rotación acumulada en el eje Y
+	double pitch = 0.0;  // Rotación acumulada en el eje X
+
 public:
 	const auto& mat() const { return _mat; }
 	const auto& left() const { return _left; }
@@ -30,6 +34,9 @@ public:
 
 	void translate(const vec3& v);
 	void rotate(double rads, const vec3& v);
+	void rotateYawPitch(double deltaYaw, double deltaPitch);
+
+	void lookAt(double yawOffset, double pitchOffset);
 
 	Transform operator*(const mat4& other) { return Transform(_mat * other); }
 	Transform operator*(const Transform& other) { return Transform(_mat * other._mat); }

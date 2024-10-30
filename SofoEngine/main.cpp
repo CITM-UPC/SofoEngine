@@ -192,8 +192,40 @@ static void reshape_func(int width, int height) {
 	glLoadMatrixd(&camera.projection()[0][0]);
 }
 
-static void mouseWheel_func(int wheel, int direction, int x, int y) {
-	camera.transform().translate(vec3(0, 0, direction * 0.1));
+const double moveSpeed = 0.1;
+const float mouseSensitivity = 0.005f;
+static int lastMouseX, lastMouseY;
+static bool firstMouse = true;
+
+static void camera_func(Transform& cameraTransform, const Uint8* keyState, int mouseX, int mouseY, bool rightClickHeld) {
+
+	if (rightClickHeld) {
+		if (firstMouse) {
+			lastMouseX = mouseX;
+			lastMouseY = mouseY;
+			firstMouse = false;
+		}
+
+		// Calcula el delta del ratón
+		float deltaX = (mouseX - lastMouseX) * mouseSensitivity;
+		float deltaY = (mouseY - lastMouseY) * mouseSensitivity;
+
+		// Actualiza el último estado del ratón
+		lastMouseX = mouseX;
+		lastMouseY = mouseY;
+
+		// Rota la cámara con los desplazamientos de yaw y pitch
+		cameraTransform.rotateYawPitch(-deltaX, deltaY);
+
+		// Movimiento de la cámara con WASD
+		if (keyState[SDL_SCANCODE_W]) cameraTransform.translate(cameraTransform.fwd() * -moveSpeed);
+		if (keyState[SDL_SCANCODE_S]) cameraTransform.translate(cameraTransform.fwd() * moveSpeed);
+		if (keyState[SDL_SCANCODE_A]) cameraTransform.translate(cameraTransform.left() * -moveSpeed);
+		if (keyState[SDL_SCANCODE_D]) cameraTransform.translate(cameraTransform.left() * moveSpeed);
+	}
+	else {
+		firstMouse = true;  // Reinicia el primer movimiento del ratón al soltar el clic derecho
+	}
 }
 
 static void idle_func() {
@@ -229,19 +261,6 @@ static void initScene() {
 	child_textured_quad.setTextureImage(chess_texture_image);
 }
 
-//static void init_openGL() {
-//	glewInit();
-//	if (!GLEW_VERSION_3_0) throw exception("OpenGL 3.0 API is not available.");
-//	glEnable(GL_DEPTH_TEST);
-//	glClearColor(0.5, 0.5, 0.5, 1.0);
-//
-//	glMatrixMode(GL_PROJECTION);
-//	glLoadIdentity();
-//	glScaled(1.0, (double)WINDOW_SIZE.x/WINDOW_SIZE.y, 1.0);
-//	
-//	glMatrixMode(GL_MODELVIEW);
-//}
-
 int main(int argc, char** argv) {
 	MyWindow window("Sofo Engine", WINDOW_SIZE.x, WINDOW_SIZE.y);
 	MyGUI gui(window.windowPtr(), window.contextPtr());
@@ -254,7 +273,11 @@ int main(int argc, char** argv) {
 
 	initScene();
 
-	while (window.processEvents(&gui) && window.isOpen()) {
+	bool running = true;
+	const Uint8* keyState = SDL_GetKeyboardState(NULL);
+	SDL_Event e;
+
+	while (running) {
 		const auto t0 = hrclock::now();
 		display_func();
 		idle_func();
@@ -264,6 +287,53 @@ int main(int argc, char** argv) {
 		const auto t1 = hrclock::now();
 		const auto dt = t1 - t0;
 		if (dt < FRAME_DT) this_thread::sleep_for(FRAME_DT - dt);
+
+		int mouseX, mouseY;
+		Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+
+		while (SDL_PollEvent(&e))
+		{
+			gui.processEvent(e);
+
+			switch (e.type) {
+			case SDL_QUIT:
+				running = false;
+				break;
+			//case SDL_DROPFILE:
+			//	dropped_filePath = e.drop.file;
+			//	extension = getFileExtension(dropped_filePath);
+
+			//	if (extension == "obj" || extension == "fbx" || extension == "dae") {
+			//		mesh->LoadFile(dropped_filePath);
+			//		GameObject go;
+			//		go.AddComponent<MeshLoader>()->SetMesh(mesh);
+			//		go.setMesh(mesh);
+			//		scene.emplaceChild(go);
+			//	}
+			//	else if (extension == "png" || extension == "jpg" || extension == "bmp") {
+			//		int mouseX, mouseY;
+			//		SDL_GetMouseState(&mouseX, &mouseY);
+			//		for (auto& child : scene.children()) {
+			//			if (isMouseOverGameObject(child, mouseX, mouseY)) {
+			//				imageTexture->LoadTexture(dropped_filePath);
+			//				texture->setImage(imageTexture);
+			//				child.GetComponent<MeshLoader>()->GetMesh()->deleteCheckerTexture();
+			//				child.GetComponent<MeshLoader>()->SetImage(imageTexture);
+			//				child.GetComponent<MeshLoader>()->SetTexture(texture);
+			//			}
+			//		}
+
+			//	}
+			//	else {
+			//		std::cerr << "Unsupported file extension: " << extension << std::endl;
+			//	}
+			//	SDL_free(dropped_filePath);
+			//	//Hasta aquí
+			//	break;
+			}
+		}
+
+		camera_func(camera.transform(), keyState, mouseX, mouseY, mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT));
 	}
 
 	return 0;
