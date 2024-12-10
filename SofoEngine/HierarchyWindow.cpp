@@ -58,7 +58,32 @@ void HierarchyWindow::RecurseShowChildren(GraphicObject& parent)
 			std::cout << "Selected GameObject: " << childGO.getName() << Scene::get().selectedGO->getName() << std::endl;
 		}
 
-		if (isOpen)
+		/*if (ReparentDragDrop(childGO))
+		{
+			ImGui::TreePop();
+			break;
+		}*/
+
+		ContextMenu(childGO);
+		if (duplicate)
+		{
+			ImGui::TreePop();
+			duplicate = false;
+			break;
+		}
+		if (createEmpty)
+		{
+			ImGui::TreePop();
+			createEmpty = false;
+			break;
+		}
+		if (remove)
+		{
+			ImGui::TreePop();
+			break;
+		}
+
+		if (isOpen && !reparent)
 		{
 			treeFlags &= ~ImGuiTreeNodeFlags_Selected;
 			RecurseShowChildren(childGO);
@@ -66,5 +91,99 @@ void HierarchyWindow::RecurseShowChildren(GraphicObject& parent)
 			ImGui::TreePop();
 		}
 
+		/*if (remove)
+		{
+			for (auto& item : toDeleteList)
+			{
+				item.Delete();
+			}
+
+			remove = false;
+		}*/
+
 	}
 }
+
+
+void HierarchyWindow::ContextMenu(GraphicObject& go)
+{
+	if (ImGui::BeginPopupContextItem())
+	{
+		if (ImGui::MenuItem("Create Empty"))
+		{
+			createEmpty = true;
+			Scene::get().Reparent(go, Scene::get().CreateEmpty("Parent of " + go.getName()));
+		}
+
+		if (ImGui::MenuItem("Duplicate"))
+		{
+			duplicate = true;
+			Scene::get().selectedGO = &Scene::get().Duplicate(go);
+			//LOG(LogType::LOG_INFO, "%s has been duplicated", go.get()->GetName().c_str());
+		}
+
+		//if (ImGui::MenuItem("Remove"))
+		//{
+		//	remove = true;
+		//	//LOG(LogType::LOG_INFO, "Use Count: %d", go.use_count());
+		//	engine->N_sceneManager->SetSelectedGO(nullptr);
+
+		//	toDeleteList.push_back(go);
+
+		//	//go.get()->Delete();
+		//	//go.get()->Disable();
+		//}
+
+		ImGui::EndPopup();
+	}
+}
+
+//bool HierarchyWindow::ReparentDragDrop(GraphicObject& childGO)
+//{
+//	if (ImGui::BeginDragDropSource())
+//	{
+//		if (childGO != Scene::get().scene)
+//		{
+//			ImGui::SetDragDropPayload(Scene::get().selectedGO->getName().c_str(), &childGO, sizeof(GraphicObject));
+//		}
+//
+//		ImGui::EndDragDropSource();
+//	}
+//
+//	if (ImGui::BeginDragDropTarget())
+//	{
+//		if (Scene::get().selectedGO)
+//		{
+//			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload((Scene::get().selectedGO->getName().c_str())))
+//			{
+//				GraphicObject* dragging = *(GraphicObject**)payload->Data;
+//				GraphicObject* currentParent = &childGO;
+//
+//				while (currentParent)
+//				{
+//					if (currentParent == dragging)
+//						return false;
+//
+//					currentParent = &currentParent->parent();
+//				}
+//
+//				GraphicObject* oldParent = &dragging->parent();
+//				dragging->parent() = childGO;
+//				GraphicObject newChild = *dragging;
+//
+//				if (oldParent != nullptr)
+//				{
+//					oldParent->removeChild(newChild);
+//				}
+//
+//				childGO.emplaceChild(newChild);
+//				reparent = true;
+//			}
+//		}
+//
+//		ImGui::EndDragDropTarget();
+//	}
+//
+//	return reparent;
+//}
+

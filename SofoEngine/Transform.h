@@ -37,6 +37,8 @@ public:
 	void rotate(double rads, const vec3& v);
 	void rotateYawPitch(double deltaYaw, double deltaPitch);
 
+	void setMatrix(const mat4& mat) { _mat = mat; }
+
 	void lookAt(double yawOffset, double pitchOffset);
 
 	glm::vec3 scale() const {

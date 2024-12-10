@@ -16,11 +16,17 @@ public:
     Scene(Scene&&) = delete;
     Scene& operator=(Scene&&) = delete;
 
+
+    void Reparent(GraphicObject& originalGO, GraphicObject& newParentGO);
+    GraphicObject& CreateEmpty(std::string name = "Empty GameObject");
+    GraphicObject& Duplicate(GraphicObject& originalGO);
+
     Camera camera;
     GraphicObject scene;
-    GraphicObject* selectedGO;
+    GraphicObject* selectedGO = nullptr;
 
 private:
-    Scene() = default;
+    std::string GenerateUniqueName(const std::string& baseName, const GraphicObject* go = nullptr);
+    Scene() : selectedGO(nullptr) {}
 };
 

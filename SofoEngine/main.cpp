@@ -24,6 +24,7 @@
 #include <IL/ilut.h>
 #include <filesystem>
 #include "Scene.h"
+#include <glm/gtc/type_ptr.hpp>
 #include <random>
 
 using namespace std;
@@ -142,6 +143,27 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 
 		auto mesh = std::make_shared<Mesh>();
 		mesh->load(vertices.data(), vertices.size(), indices.data(), indices.size());
+
+		// Basic Data
+		std::string standarizedName = aiMesh->mName.C_Str();
+		size_t index = 0;
+		while ((index = standarizedName.find('.', index)) != std::string::npos) {
+			standarizedName.replace(index, 1, "_");
+			index++;
+		}
+		mesh->setName(standarizedName);
+
+		glm::mat4 mTransform(1);
+		if (aiMesh->mName != (aiString)"Scene")
+		{
+			aiNode* meshNode = scene->mRootNode->FindNode(aiMesh->mName);
+			if (meshNode)
+			{
+				aiMatrix4x4 transform = meshNode->mTransformation;
+				mTransform = glm::transpose(glm::make_mat4(&transform.a1));
+			}
+		}
+		mesh->loadModelMatrix(mTransform);
 
 		if (!texCoords.empty()) {
 			mesh->loadTexCoords(texCoords.data());
@@ -457,7 +479,7 @@ int main(int argc, char** argv) {
 				
 				std::filesystem::path file = e.drop.file;
 
-				if (file.extension() == ".obj" || file.extension() == ".fbx") {
+				if (file.extension() == ".obj" || file.extension() == ".OBJ" || file.extension() == ".fbx" || file.extension() == ".FBX") {
 					auto& child = Scene::get().scene.emplaceChild();
 					child.setName(generateRandomNameFromBase(file.filename().string()));
 					for (auto& mesh : loadMeshesFromFile(file.string()))
@@ -465,7 +487,8 @@ int main(int argc, char** argv) {
 						auto& part = child.emplaceChild();
 						part.setMesh(mesh);
 						//part.setTextureImage(loadImageFromFile("Assets/Baker_house.png"));
-						part.setName(generateRandomNameFromBase(file.filename().string()));
+						part.setName(mesh->name());
+						part.setMatrix(mesh->modelMatrix());
 					}
 				}
 				else if (file.extension() == ".png") {

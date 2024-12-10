@@ -37,6 +37,7 @@ public:
 	void setTextureImage(std::shared_ptr<Image> img_ptr) { _texture.setImage(img_ptr); }
 	void setMesh(const std::shared_ptr<Mesh>& mesh_ptr) { _mesh_ptr = mesh_ptr; }
 	void setName(const std::string& name) { _name = name; }
+	void setMatrix(const glm::mat4& mat) { _transform.setMatrix(mat); }
 
 	bool hasTexture() const { return _texture.id(); }
 	bool hasMesh() const { return _mesh_ptr != nullptr; }
