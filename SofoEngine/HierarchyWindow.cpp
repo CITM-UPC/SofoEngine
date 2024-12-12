@@ -109,28 +109,17 @@ void HierarchyWindow::ContextMenu(GameObject& go)
 {
 	if (ImGui::BeginPopupContextItem())
 	{
-		if (ImGui::MenuItem("Create Empty"))
+		/*if (ImGui::MenuItem("Create Empty"))
 		{
 			createEmpty = true;
-			Scene::get().Reparent(go, Scene::get().CreateEmpty("Parent of " + go.getName()));
-		}
+			Scene::get().CreateEmptyWithParent(go, "Parent of " + go.getName());
+		}*/
 
 		if (ImGui::MenuItem("Duplicate"))
 		{
 			duplicate = true;
 			Scene::get().selectedGO = &Scene::get().Duplicate(go);
 		}
-
-		//if (ImGui::MenuItem("Remove"))
-		//{
-		//	remove = true;
-		//	engine->N_sceneManager->SetSelectedGO(nullptr);
-
-		//	toDeleteList.push_back(go);
-
-		//	//go->Delete();
-		//	//go->Disable();
-		//}
 
 		ImGui::EndPopup();
 	}

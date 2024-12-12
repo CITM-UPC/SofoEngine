@@ -56,26 +56,21 @@ void Scene::Shutdown()
 
 void Scene::Reparent(GameObject& originalGO, GameObject& newParentGO)
 {
-	//for (auto& go : originalGO.parent().children())
-	//{
-	//	if (go == originalGO)
-	//	{
-	//		//GraphicObject parent = originalGO.parent();
-	//		
+	/*for (auto& go : originalGO.parent().children())
+	{
+		if (go == originalGO)
+		{
+			originalGO.parent().emplaceChild(newParentGO);
 
-	//		//GraphicObject original(originalGO);
+			newParentGO.emplaceChild(originalGO);
 
-	//		originalGO.parent().emplaceChild(newParentGO);
-
-	//		newParentGO.emplaceChild(originalGO);
-
-	//		originalGO.parent().removeChild(originalGO);
+			originalGO.parent().removeChild(originalGO);
 
 
-	//		break;
-	//	}
+			break;
+		}
 
-	//}
+	}*/
 }
 
 GameObject& Scene::CreateEmpty(std::string name)
@@ -85,6 +80,22 @@ GameObject& Scene::CreateEmpty(std::string name)
 	empty.AddComponent<Transform>();
 	return empty;
 }
+
+GameObject& Scene::CreateEmptyWithParent(GameObject& child, std::string name) {
+
+	GameObject& empty = child.parent().emplaceChild(); // Crear el Empty como hijo del actual padre del objeto
+	empty.setName(GenerateUniqueName(name));
+	empty.AddComponent<Transform>();
+
+	// Reasignar la jerarquía
+	//child.parent().removeChild(child);   // Quitar el objeto original de su padre actual
+	empty.emplaceChild(std::move(child)); // Añadir el objeto original como hijo del Empty
+
+	return empty;
+}
+
+
+
 
 GameObject& Scene::Duplicate(GameObject& originalGO)
 {

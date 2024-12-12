@@ -37,29 +37,17 @@ void MyGUI::render()
 {
 	if (ImGui::BeginMainMenuBar())
 	{
-		//if (ImGui::BeginMenu("File"))
-		//{
-		//	ret = MainMenuFile();
-		//	ImGui::EndMenu();
-		//}
+		if (ImGui::BeginMenu("Edit"))
+		{
+			MainMenuEdit();
+			ImGui::EndMenu();
+		}
 
-		//if (ImGui::BeginMenu("Edit"))
-		//{
-		//	MainMenuEdit();
-		//	ImGui::EndMenu();
-		//}
-
-		//if (ImGui::BeginMenu("Assets"))
-		//{
-		//	MainMenuAssets();
-		//	ImGui::EndMenu();
-		//}
-
-		//if (ImGui::BeginMenu("GameObject"))
-		//{
-		//	MainMenuGameObject();
-		//	ImGui::EndMenu();
-		//}
+		if (ImGui::BeginMenu("GameObject"))
+		{
+			MainMenuGameObject();
+			ImGui::EndMenu();
+		}
 
 		if (ImGui::BeginMenu("Help"))
 		{
@@ -67,8 +55,7 @@ void MyGUI::render()
 			ImGui::EndMenu();
 		}
 
-		//// Play/Pause/Stop
-		ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x / 2 - 290, 0.0f));
+		ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x / 2 -100, 0.0f));
 		if (ImGui::Button(" > "))  Scene::get().playState = PlayState::PLAYING;
 		if (ImGui::Button(" [] "))  Scene::get().playState = PlayState::STOPPED;
 
@@ -96,6 +83,23 @@ void MyGUI::End()
 
 void MyGUI::processEvent(const SDL_Event& event) {
 	ImGui_ImplSDL2_ProcessEvent(&event);
+}
+
+void MyGUI::MainMenuEdit()
+{
+	if (ImGui::MenuItem("Undo", "Ctrl+Z", false, false)) {}
+	if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) {}
+
+	ImGui::Separator();
+
+	if (ImGui::MenuItem("Cut", "Ctrl+X", false, false)) {}
+	if (ImGui::MenuItem("Copy", "Ctrl+C", false, false)) {}
+	if (ImGui::MenuItem("Paste", "Ctrl+V", false, false)) {}
+}
+
+void MyGUI::MainMenuGameObject()
+{
+	if (ImGui::MenuItem("Create Empty")) { Scene::get().CreateEmpty(); }
 }
 
 void MyGUI::MainMenuHelp()

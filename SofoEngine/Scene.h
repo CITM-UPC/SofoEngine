@@ -26,6 +26,7 @@ public:
 
     void Reparent(GameObject& originalGO, GameObject& newParentGO);
     GameObject& CreateEmpty(std::string name = "Empty GameObject");
+    GameObject& CreateEmptyWithParent(GameObject& child, std::string name);
     GameObject& Duplicate(GameObject& originalGO);
 
     GameObject editorCameraGO;

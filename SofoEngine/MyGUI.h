@@ -18,6 +18,10 @@ public:
 
 	void processEvent(const SDL_Event& event) override;
 
+	void MainMenuEdit();
+
+	void MainMenuGameObject();
+
 	void MainMenuHelp();
 
 	std::vector<GUIwindow*> GUIwindows;
