@@ -28,6 +28,16 @@ Working on this project is me, you can find my projects at Sofialiles55.
 
 -Working keys and moving camera (work in progress).
 
+-Component System
+
+-Hierarchy utilities
+
+-Mouse Picking
+
+-Camera Frustrum
+
+-Play and Pause Button
+
 -Windows:
 
 
