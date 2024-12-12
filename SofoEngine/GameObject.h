@@ -39,10 +39,10 @@ public:
 
 	void draw();
 
-    BoundingBox localBoundingBox();
-    BoundingBox boundingBox() { return GetComponent<Transform>()->GetGlobalTransform() * localBoundingBox(); }
+    BoundingBox localBoundingBox() const;
+    BoundingBox boundingBox() const { return GetComponent<Transform>()->GetLocalTransform() * localBoundingBox(); }
 
-    BoundingBox worldBoundingBox();
+    BoundingBox worldBoundingBox() const;
 
 
 	bool isEnabled() const { return enabled; }
@@ -60,6 +60,17 @@ public:
     // Components
     template <typename TComponent>
     TComponent* GetComponent()
+    {
+        for (const auto& component : components)
+        {
+            if (dynamic_cast<TComponent*>(component.get()))
+                return static_cast<TComponent*>(component.get());
+        }
+        return nullptr;
+    }
+
+    template <typename TComponent>
+    TComponent* GetComponent() const
     {
         for (const auto& component : components)
         {

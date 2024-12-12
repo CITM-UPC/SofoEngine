@@ -219,7 +219,7 @@ void InspectorWindow::draw()
                 isDirty = true;
             }
 
-            //ImGui::Checkbox("Draw Frustrum", &camera->drawFrustum);
+            ImGui::Checkbox("Draw Frustrum", &camera->drawFrustum);
 
             if (ImGui::Button("Primary Camera"))
             {

@@ -145,6 +145,7 @@
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MyGUI.cpp" />
     <ClCompile Include="MyWindow.cpp" />
+    <ClCompile Include="Ray.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Transform.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="ConfigurationWindow.h" />
+    <ClInclude Include="Frustrum.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GraphicObject.h" />
     <ClInclude Include="GUIwindow.h" />
@@ -166,6 +168,7 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MyGUI.h" />
     <ClInclude Include="MyWindow.h" />
+    <ClInclude Include="Ray.h" />
     <ClInclude Include="readOnlyView.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Texture.h" />

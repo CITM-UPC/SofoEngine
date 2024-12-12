@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <GL/glew.h>
 #include <chrono>
 #include <thread>
@@ -30,6 +31,8 @@
 #include <stack>
 #include "Utils.h"
 #include <imgui_impl_sdl2.h>
+#include <queue>
+
 
 using namespace std;
 
@@ -256,6 +259,49 @@ static void drawFloorGrid(int size, double step) {
 	glEnd();
 }
 
+
+static void DrawFrustum(const Frustum& frustum) {
+	glBegin(GL_LINES);
+	glColor3f(1.0f, 1.0f, 1.0f);
+
+	glVertex3fv(&frustum.vertices[0].x); glVertex3fv(&frustum.vertices[1].x);
+	glVertex3fv(&frustum.vertices[1].x); glVertex3fv(&frustum.vertices[2].x);
+	glVertex3fv(&frustum.vertices[2].x); glVertex3fv(&frustum.vertices[3].x);
+	glVertex3fv(&frustum.vertices[3].x); glVertex3fv(&frustum.vertices[0].x);
+
+	glVertex3fv(&frustum.vertices[4].x); glVertex3fv(&frustum.vertices[5].x);
+	glVertex3fv(&frustum.vertices[5].x); glVertex3fv(&frustum.vertices[6].x);
+	glVertex3fv(&frustum.vertices[6].x); glVertex3fv(&frustum.vertices[7].x);
+	glVertex3fv(&frustum.vertices[7].x); glVertex3fv(&frustum.vertices[4].x);
+
+	glVertex3fv(&frustum.vertices[0].x); glVertex3fv(&frustum.vertices[4].x);
+	glVertex3fv(&frustum.vertices[1].x); glVertex3fv(&frustum.vertices[5].x);
+	glVertex3fv(&frustum.vertices[2].x); glVertex3fv(&frustum.vertices[6].x);
+	glVertex3fv(&frustum.vertices[3].x); glVertex3fv(&frustum.vertices[7].x);
+
+	glEnd();
+}
+
+
+static Ray lastRay;
+void DrawRay(const Ray& newRay = Ray(), bool update = false) {
+
+	if (update) {
+		lastRay = newRay;
+	}
+
+	glBegin(GL_LINES);
+
+	glColor3f(1.0f, 0.0f, 0.0f);
+
+	glVertex3f(lastRay.Origin.x, lastRay.Origin.y, lastRay.Origin.z);
+
+	glm::vec3 endpoint = lastRay.Origin + lastRay.Direction * 100.0f;
+	glVertex3f(endpoint.x, endpoint.y, endpoint.z);
+
+	glEnd();
+}
+
 static void drawDebugInfoForGraphicObject(GameObject& obj) {
 	glPushMatrix();
 	glColor3ub(255, 255, 0);
@@ -274,8 +320,14 @@ static void drawDebugInfoForGraphicObject(GameObject& obj) {
 
 static void drawWorldDebugInfoForGraphicObject(GameObject& obj) {
 	glColor3ub(255, 255, 255);
+
 	drawBoundingBox(obj.worldBoundingBox());
-	for (auto& child : obj.children()) drawWorldDebugInfoForGraphicObject(child);
+
+	if (obj.GetComponent<Camera>() && obj.GetComponent<Camera>()->drawFrustum) 
+		DrawFrustum(obj.GetComponent<Camera>()->frustum);
+
+	for (auto& child : obj.children()) 
+		drawWorldDebugInfoForGraphicObject(child);
 }
 
 static void display_func(Camera* cam) {
@@ -290,6 +342,7 @@ static void display_func(Camera* cam) {
 	glColor3ub(255, 255, 255);
 	//drawDebugInfoForGraphicObject(Scene::get().scene);
 	drawWorldDebugInfoForGraphicObject(Scene::get().scene);
+	DrawRay(lastRay);
 }
 
 static void init_opengl() {
@@ -396,6 +449,54 @@ void CameraMovement(GameObject* cam, float deltaTime)
 	}
 }
 
+GameObject* PickGameObject(const Ray& ray, const GameObject& root, float& closestDistance) {
+	GameObject* closestGO = nullptr;
+	closestDistance = std::numeric_limits<float>::max();
+
+	// Cola para recorrer la jerarquía
+	std::queue<const GameObject*> toVisit;
+	toVisit.push(&root);
+
+	while (!toVisit.empty()) {
+		const GameObject* currentGO = toVisit.front();
+		toVisit.pop();
+
+		// Obtener la bounding box en el espacio mundial
+		BoundingBox bb = currentGO->worldBoundingBox();
+
+		// Verificar si el rayo intersecta con el bounding box
+		float distance;
+		if (ray.Intersects(bb, distance) && distance < closestDistance) {
+			closestDistance = distance;
+			closestGO = const_cast<GameObject*>(currentGO); // Remover const
+		}
+
+		// Añadir los hijos a la cola
+		for (const auto& child : currentGO->children()) {
+			toVisit.push(&child);
+		}
+	}
+
+	return closestGO;
+}
+
+
+
+void HandleMousePicking() {
+	float normalizedX = (2.0f * inputManager.GetMouseX()) / WINDOW_SIZE.x - 1.0f;
+	float normalizedY = -(2.0f * inputManager.GetMouseY()) / WINDOW_SIZE.y + 1.0f;
+
+	lastRay = Scene::get().editorCameraGO.GetComponent<Camera>()->ComputeCameraRay(normalizedX, normalizedY);
+
+	float closestDistance = 0;
+	GameObject* pickedGO = PickGameObject(lastRay, Scene::get().scene, closestDistance);
+	if (pickedGO != nullptr)
+	{
+		Scene::get().selectedGO = pickedGO;
+	}
+}
+
+
 int main(int argc, char** argv) {
 
 	ilInit();
@@ -436,6 +537,9 @@ int main(int argc, char** argv) {
 			break;
 		}
 		reshape_func(WINDOW_SIZE.x, WINDOW_SIZE.y);
+
+		if (inputManager.GetMouseButton(SDL_BUTTON_LEFT) == KEY_DOWN)
+			HandleMousePicking();
 
 		for(auto& event : inputManager.GetSDLEvents())
 			ImGui_ImplSDL2_ProcessEvent(&event);

@@ -45,7 +45,7 @@ void Scene::Init()
 	mainCamera = &scene.emplaceChild();
 	mainCamera->setName("Main Camera");
 	mainCamera->AddComponent<Transform>();
-	mainCamera->GetComponent<Transform>()->SetLocalPosition({ 5, 3, 0 });
+	mainCamera->GetComponent<Transform>()->SetLocalPosition({ 0, 3, -10 });
 	mainCamera->GetComponent<Transform>()->SetLocalRotation({ 0.5, 0, 0 });
 	mainCamera->AddComponent<Camera>();
 }

@@ -8,6 +8,15 @@ BoundingBox::BoundingBox()
 	max = vec3(DEFAULT_BBOX_SIZE);
 }
 
+BoundingBox::BoundingBox(double MAX, double MIN)
+{
+	min = vec3(-MIN);
+	max = vec3(MAX);
+}
+
+BoundingBox::BoundingBox(const glm::vec3& pMin, const glm::vec3& pMax)
+	: min(glm::min(pMin, pMax)), max(glm::max(pMin, pMax)) {}
+
 BoundingBox::BoundingBox(const vec3* vertices, size_t num_verts) {
 	min = max = vertices[0];
 	for (size_t i = 1; i < num_verts; ++i) {

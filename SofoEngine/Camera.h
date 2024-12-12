@@ -3,26 +3,8 @@
 #include "Transform.h"
 #include "Component.h"
 #include "types.h"
-
-//class Camera : public Component {
-//
-//public:
-//	double fov = glm::radians(60.0);
-//	double aspect = 16.0 / 9.0 ;
-//	double zNear = 0.1;
-//	double zFar = 128.0;
-//
-//private:
-//	Transform _transform;
-//
-//public:
-//	const auto& transform() const { return _transform; }
-//	auto& transform() { return _transform; }
-//
-//	mat4 projection() const;
-//	mat4 view() const;
-//	
-//};
+#include "Frustrum.h"
+#include "Ray.h"
 
 class Camera : public Component {
 
@@ -45,6 +27,9 @@ public:
     void UpdateViewMatrix();
     void UpdateProjectionMatrix();
     void UpdateViewProjectionMatrix();
+    void UpdateFrustum();
+
+    Ray ComputeCameraRay(float x, float y);
 
 public:
 
@@ -57,4 +42,7 @@ public:
     float yaw, pitch;
 
     vec3f lookAt;
+
+    Frustum frustum;
+    bool drawFrustum;
 };

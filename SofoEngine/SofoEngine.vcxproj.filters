@@ -72,6 +72,9 @@
     <ClCompile Include="InputManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Ray.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MyWindow.h">
@@ -141,6 +144,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="InputManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Frustrum.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Ray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

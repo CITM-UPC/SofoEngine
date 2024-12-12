@@ -147,7 +147,7 @@ GameObject GameObject::Clone() {
 	return duplicate;
 }
 
-BoundingBox GameObject::localBoundingBox() {
+BoundingBox GameObject::localBoundingBox() const {
 	Mesh* _mesh_ptr = GetComponent<Mesh>();
 	if (children().size()) {
 		BoundingBox bbox = _mesh_ptr ? _mesh_ptr->boundingBox() : children().front().boundingBox();
@@ -157,9 +157,8 @@ BoundingBox GameObject::localBoundingBox() {
 	else return _mesh_ptr ? _mesh_ptr->boundingBox() : BoundingBox();
 }
 
-BoundingBox GameObject::worldBoundingBox() {
+BoundingBox GameObject::worldBoundingBox() const {
 	Mesh* _mesh_ptr = GetComponent<Mesh>();
-	BoundingBox bbox = GetComponent<Transform>()->GetGlobalTransform() * (_mesh_ptr ? _mesh_ptr->boundingBox() : BoundingBox());
-	//for (auto& child : children()) bbox = bbox + child.worldBoundingBox();
+	BoundingBox bbox = GetComponent<Transform>()->GetGlobalTransform() * (_mesh_ptr ? _mesh_ptr->boundingBox() : BoundingBox(vec3(-.3), vec3(.3)));
 	return bbox;
 }
