@@ -150,7 +150,7 @@ void InspectorWindow::draw()
             static bool useCheckerTexture = false;
             ImGui::Checkbox("Use checker texture", &useCheckerTexture);
 
-            if (useCheckerTexture || !texture->hasTexture())
+            if (useCheckerTexture)
             {
                 texture->applyCheckerTexture();
             }
