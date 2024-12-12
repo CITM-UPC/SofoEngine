@@ -21,6 +21,9 @@ Working on this project is me, you can find my projects at Sofialiles55.
 
 -Drag and drop the fbx.
 
+
+-Pick the object and drop the png
+
 ***FEATURES***
 
 
