@@ -75,6 +75,8 @@ void Texture::applyCheckerTexture()
 
 void Texture::applyOriginalTexture()
 {
-    if (_img_ptr != _checkerTexture) return;
-		_img_ptr = _originalTexture;
+    if (_img_ptr != _checkerTexture) 
+		return;
+
+	_img_ptr = _originalTexture;
 }

@@ -259,11 +259,11 @@ static void drawFloorGrid(int size, double step) {
 static void drawDebugInfoForGraphicObject(GameObject& obj) {
 	glPushMatrix();
 	glColor3ub(255, 255, 0);
-	//drawBoundingBox(obj.boundingBox());
+	drawBoundingBox(obj.boundingBox());
 	glMultMatrixd(obj.GetComponent<Transform>()->data());
 	drawAxis(0.5);
 	glColor3ub(0, 255, 255);
-	//drawBoundingBox(obj.localBoundingBox());
+	drawBoundingBox(obj.localBoundingBox());
 
 	glColor3ub(255, 0, 0);
 	if (obj.GetComponent<Mesh>()) drawBoundingBox(obj.boundingBox());
@@ -273,25 +273,23 @@ static void drawDebugInfoForGraphicObject(GameObject& obj) {
 }
 
 static void drawWorldDebugInfoForGraphicObject(GameObject& obj) {
-	/*glColor3ub(255, 255, 255);
+	glColor3ub(255, 255, 255);
 	drawBoundingBox(obj.worldBoundingBox());
-	for (auto& child : obj.children()) drawWorldDebugInfoForGraphicObject(child);*/
+	for (auto& child : obj.children()) drawWorldDebugInfoForGraphicObject(child);
 }
 
-static void display_func() {
+static void display_func(Camera* cam) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixd(&Scene::get().editorCameraGO.GetComponent<Camera>()->getViewMatrix()[0][0]);
+	glLoadMatrixd(&cam->getViewMatrix()[0][0]);
 
 	drawFloorGrid(16, 0.25);
 	Scene::get().scene.draw();
 
 	glColor3ub(255, 255, 255);
-	drawDebugInfoForGraphicObject(Scene::get().scene);
+	//drawDebugInfoForGraphicObject(Scene::get().scene);
 	drawWorldDebugInfoForGraphicObject(Scene::get().scene);
-
-	//glutSwapBuffers();
 }
 
 static void init_opengl() {
@@ -415,7 +413,7 @@ int main(int argc, char** argv) {
 	// Init editorCamera
 	Transform* editorCameraTransform = Scene::get().editorCameraGO.GetComponent<Transform>();
 	editorCameraTransform->SetLocalPosition(vec3(0, 1, 4));
-	//editorCameraTransform->Rotate(vec3(0, 1 * glm::radians(18.0), 0));
+	editorCameraTransform->Rotate(vec3(0, 1 * glm::radians(180.0), 0));
 	Scene::get().scene.setName("Scene");
 
 	bool running = true;
@@ -424,7 +422,19 @@ int main(int argc, char** argv) {
 
 	while (running) {
 		const auto t0 = hrclock::now();
-		display_func();
+
+		switch (Scene::get().playState)
+		{
+		case PlayState::STOPPED:
+			display_func(Scene::get().editorCameraGO.GetComponent<Camera>());
+			break;
+		case PlayState::PLAYING:
+			if (Scene::get().mainCamera != nullptr)
+				display_func(Scene::get().mainCamera->GetComponent<Camera>());
+			else
+				display_func(Scene::get().editorCameraGO.GetComponent<Camera>());
+			break;
+		}
 		reshape_func(WINDOW_SIZE.x, WINDOW_SIZE.y);
 
 		for(auto& event : inputManager.GetSDLEvents())

@@ -8,6 +8,8 @@
 #include "AboutWindow.h"
 #include "ConfigurationWindow.h"
 #include "InspectorWindow.h"
+#include <SDL2/SDL_misc.h>
+#include "Scene.h"
 
 MyGUI::MyGUI(SDL_Window* window, void* context) {
     IMGUI_CHECKVERSION();
@@ -33,6 +35,46 @@ MyGUI::~MyGUI() {
 
 void MyGUI::render()
 {
+	if (ImGui::BeginMainMenuBar())
+	{
+		//if (ImGui::BeginMenu("File"))
+		//{
+		//	ret = MainMenuFile();
+		//	ImGui::EndMenu();
+		//}
+
+		//if (ImGui::BeginMenu("Edit"))
+		//{
+		//	MainMenuEdit();
+		//	ImGui::EndMenu();
+		//}
+
+		//if (ImGui::BeginMenu("Assets"))
+		//{
+		//	MainMenuAssets();
+		//	ImGui::EndMenu();
+		//}
+
+		//if (ImGui::BeginMenu("GameObject"))
+		//{
+		//	MainMenuGameObject();
+		//	ImGui::EndMenu();
+		//}
+
+		if (ImGui::BeginMenu("Help"))
+		{
+			MainMenuHelp();
+			ImGui::EndMenu();
+		}
+
+		//// Play/Pause/Stop
+		ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x / 2 - 290, 0.0f));
+		if (ImGui::Button(" > "))  Scene::get().playState = PlayState::PLAYING;
+		if (ImGui::Button(" [] "))  Scene::get().playState = PlayState::STOPPED;
+
+		ImGui::EndMainMenuBar();
+	}
+
 	for (auto& window : GUIwindows)
 	{
 		window->draw();
@@ -54,4 +96,14 @@ void MyGUI::End()
 
 void MyGUI::processEvent(const SDL_Event& event) {
 	ImGui_ImplSDL2_ProcessEvent(&event);
+}
+
+void MyGUI::MainMenuHelp()
+{
+	if (ImGui::MenuItem("Documentation"))
+	{
+		const char* url = "https://github.com/Sofialiles55/SofoEngine";
+
+		if (SDL_OpenURL(url) != 0) {}
+	}
 }

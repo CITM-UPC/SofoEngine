@@ -28,6 +28,12 @@ void GameObject::update()
 		if (component->isEnabled())
 			component->update();
 	}
+
+	for (auto& child : children())
+	{
+		if (child.isEnabled())
+			child.update();
+	}
 }
 
 void GameObject::draw()
@@ -154,6 +160,6 @@ BoundingBox GameObject::localBoundingBox() {
 BoundingBox GameObject::worldBoundingBox() {
 	Mesh* _mesh_ptr = GetComponent<Mesh>();
 	BoundingBox bbox = GetComponent<Transform>()->GetGlobalTransform() * (_mesh_ptr ? _mesh_ptr->boundingBox() : BoundingBox());
-	for (auto& child : children()) bbox = bbox + child.worldBoundingBox();
+	//for (auto& child : children()) bbox = bbox + child.worldBoundingBox();
 	return bbox;
 }

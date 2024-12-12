@@ -2,6 +2,11 @@
 #include "Camera.h"
 #include "GameObject.h"
 
+enum class PlayState
+{
+	STOPPED,
+	PLAYING
+};
 
 class Scene
 {
@@ -27,7 +32,9 @@ public:
 	Camera* editorCamera;
     GameObject scene;
     GameObject* selectedGO = nullptr;
+    GameObject* mainCamera = nullptr;
 
+	PlayState playState = PlayState::STOPPED;
 private:
     std::string GenerateUniqueName(const std::string& baseName, const GameObject* go = nullptr);
 

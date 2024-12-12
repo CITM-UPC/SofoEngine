@@ -29,10 +29,32 @@ void InspectorWindow::draw()
     Transform* transform = selectedGO.GetComponent<Transform>();
     if (ImGui::Begin(name.c_str()))
     {
-        ImGui::Text("Selected GameObject: %s", selectedGO.getName().c_str());
-        ImGui::Separator();
+        ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_None | ImGuiTreeNodeFlags_DefaultOpen;
 
-        if (transform != nullptr && ImGui::CollapsingHeader("Transform")) {
+        ImGui::SameLine(); ImGui::Text("GameObject:");
+        ImGui::SameLine(); ImGui::TextColored({ 0.144f, 0.422f, 0.720f, 1.0f }, selectedGO.getName().c_str());
+
+        bool isEnabled = selectedGO.isEnabled();
+        if (ImGui::Checkbox("Enable", &isEnabled)) {
+            if (isEnabled != selectedGO.isEnabled())
+            {
+                if (isEnabled)
+                    selectedGO.enable();
+                else
+                    selectedGO.disable();
+            }
+        }
+
+        static char newNameBuffer[32];
+        strcpy_s(newNameBuffer, sizeof(newNameBuffer), selectedGO.getName().c_str());
+        if (ImGui::InputText("New Name", newNameBuffer, sizeof(newNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            std::string newName(newNameBuffer);
+            selectedGO.setName(newName);
+            newNameBuffer[0] = '\0';
+        }
+
+        if (transform != nullptr && ImGui::CollapsingHeader("Transform", treeNodeFlags)) {
             ImGui::SetItemTooltip("Displays and sets game object transformations");
 
             view_pos = transform->GetLocalPosition();
@@ -114,7 +136,7 @@ void InspectorWindow::draw()
         }
 
         Mesh* mesh = selectedGO.GetComponent<Mesh>();
-        if (mesh != nullptr && ImGui::CollapsingHeader("Mesh"))
+        if (mesh != nullptr && ImGui::CollapsingHeader("Mesh", treeNodeFlags))
         {
 
             ImGui::Text("Mesh vertices: %zu", mesh->vertices().size());
@@ -136,7 +158,7 @@ void InspectorWindow::draw()
         }
 
         Texture* texture = selectedGO.GetComponent<Texture>();
-        if (texture != nullptr && ImGui::CollapsingHeader("Texture"))
+        if (texture != nullptr && ImGui::CollapsingHeader("Texture", treeNodeFlags))
         {
             if (&texture->image() == nullptr)
             {
@@ -158,6 +180,67 @@ void InspectorWindow::draw()
             {
                 texture->applyOriginalTexture();
             }
+        }
+
+        /*Camera Component*/
+        Camera* camera = selectedGO.GetComponent<Camera>();
+
+        if (camera != nullptr && ImGui::CollapsingHeader("Camera", treeNodeFlags))
+        {
+            bool isDirty = false;
+
+            float fov = static_cast<float>(camera->fov);
+            float aspect = static_cast<float>(camera->aspect);
+            float zNear = static_cast<float>(camera->zNear);
+            float zFar = static_cast<float>(camera->zFar);
+
+            if (ImGui::SliderFloat("FOV", &fov, 20.0, 120.0))
+            {
+                camera->fov = fov;
+                isDirty = true;
+            }
+
+            if (ImGui::SliderFloat("Aspect", &aspect, 0.1, 10.0))
+            {
+                camera->aspect = aspect;
+                isDirty = true;
+            }
+
+            ImGui::Text("Clipping Planes");
+            if (ImGui::SliderFloat("Near", &zNear, 0.01, 10.0))
+            {
+                camera->zNear = zNear;
+                isDirty = true;
+            }
+
+            if (ImGui::SliderFloat("Far ", &zFar, 1.0, 10000.0))
+            {
+                camera->zFar = zFar;
+                isDirty = true;
+            }
+
+            //ImGui::Checkbox("Draw Frustrum", &camera->drawFrustum);
+
+            if (ImGui::Button("Primary Camera"))
+            {
+				Scene::get().mainCamera = &selectedGO;
+            }
+
+            if (isDirty) camera->UpdateCamera();
+
+            ImGui::Dummy(ImVec2(0.0f, 10.0f));
+        }
+
+
+        if (ImGui::BeginMenu("Add Component"))
+        {
+
+            if (ImGui::MenuItem("Camera"))
+            {
+                selectedGO.AddComponent<Camera>();
+            }
+
+            ImGui::EndMenu();
         }
         ImGui::End();
     }

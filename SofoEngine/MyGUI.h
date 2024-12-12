@@ -18,6 +18,8 @@ public:
 
 	void processEvent(const SDL_Event& event) override;
 
+	void MainMenuHelp();
+
 	std::vector<GUIwindow*> GUIwindows;
 
 };
