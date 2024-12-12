@@ -1,6 +1,6 @@
 #pragma once
 #include "Camera.h"
-#include "GraphicObject.h"
+#include "GameObject.h"
 
 
 class Scene
@@ -16,17 +16,21 @@ public:
     Scene(Scene&&) = delete;
     Scene& operator=(Scene&&) = delete;
 
+	void Init();
+	void Shutdown();
 
-    void Reparent(GraphicObject& originalGO, GraphicObject& newParentGO);
-    GraphicObject& CreateEmpty(std::string name = "Empty GameObject");
-    GraphicObject& Duplicate(GraphicObject& originalGO);
+    void Reparent(GameObject& originalGO, GameObject& newParentGO);
+    GameObject& CreateEmpty(std::string name = "Empty GameObject");
+    GameObject& Duplicate(GameObject& originalGO);
 
-    Camera camera;
-    GraphicObject scene;
-    GraphicObject* selectedGO = nullptr;
+    GameObject editorCameraGO;
+	Camera* editorCamera;
+    GameObject scene;
+    GameObject* selectedGO = nullptr;
 
 private:
-    std::string GenerateUniqueName(const std::string& baseName, const GraphicObject* go = nullptr);
-    Scene() : selectedGO(nullptr) {}
+    std::string GenerateUniqueName(const std::string& baseName, const GameObject* go = nullptr);
+
+    Scene() : selectedGO(nullptr), editorCamera(nullptr) {}
 };
 

@@ -133,10 +133,13 @@
     <ClCompile Include="BoundingBox.cpp" />
     <ClCompile Include="BufferObject.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Component.cpp" />
     <ClCompile Include="ConfigurationWindow.cpp" />
+    <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GraphicObject.cpp" />
     <ClCompile Include="HierarchyWindow.cpp" />
     <ClCompile Include="Image.cpp" />
+    <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="InspectorWindow.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
@@ -151,11 +154,14 @@
     <ClInclude Include="BoundingBox.h" />
     <ClInclude Include="BufferObject.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Component.h" />
     <ClInclude Include="ConfigurationWindow.h" />
+    <ClInclude Include="GameObject.h" />
     <ClInclude Include="GraphicObject.h" />
     <ClInclude Include="GUIwindow.h" />
     <ClInclude Include="HierarchyWindow.h" />
     <ClInclude Include="Image.h" />
+    <ClInclude Include="InputManager.h" />
     <ClInclude Include="InspectorWindow.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MyGUI.h" />
@@ -166,6 +172,7 @@
     <ClInclude Include="Transform.h" />
     <ClInclude Include="TreeExt.h" />
     <ClInclude Include="types.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

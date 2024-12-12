@@ -22,12 +22,14 @@ struct BoundingBox {
 
 	std::array<vec3, 8> vertices() const { return { v000(), v001(), v010(), v011(), v100(), v101(), v110(), v111() }; }
 
-	BoundingBox() = default;
+	BoundingBox();
 	BoundingBox(const vec3* vertices, size_t num_verts);
 
 	BoundingBox operator+(const BoundingBox& other) const;
 };
 
+
+BoundingBox operator*(mat4& mat, BoundingBox& bbox);
 
 BoundingBox operator*(const mat4& mat, const BoundingBox& bbox);
 

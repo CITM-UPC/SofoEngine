@@ -2,6 +2,18 @@
 #include <GL/glew.h>
 #include <vector>
 
+Texture::Texture(GameObject* containerGO) : Component(containerGO, ComponentType::Texture), _img_ptr(nullptr), wrapMode(Repeat), filter(Nearest) 
+{
+	applyCheckerTexture();
+}
+
+Texture::Texture(GameObject* containerGO, Texture* ref) : Component(containerGO, ComponentType::Texture), wrapMode(ref->wrapMode), filter(ref->filter) {
+	applyCheckerTexture();
+	_originalTexture = ref->_originalTexture;
+	_checkerTexture = ref->_checkerTexture;
+	_img_ptr = ref->_img_ptr;
+}
+
 static auto GLWrapMode(Texture::WrapModes mode) {
 	switch (mode) {
 	case Texture::Repeat: return GL_REPEAT;
@@ -64,5 +76,5 @@ void Texture::applyCheckerTexture()
 void Texture::applyOriginalTexture()
 {
     if (_img_ptr != _checkerTexture) return;
-    _img_ptr = _originalTexture;
+		_img_ptr = _originalTexture;
 }

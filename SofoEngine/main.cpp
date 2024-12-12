@@ -26,6 +26,10 @@
 #include "Scene.h"
 #include <glm/gtc/type_ptr.hpp>
 #include <random>
+#include "InputManager.h"
+#include <stack>
+#include "Utils.h"
+#include <imgui_impl_sdl2.h>
 
 using namespace std;
 
@@ -37,7 +41,6 @@ using vec3 = glm::dvec3;
 static const ivec2 WINDOW_SIZE(1280, 720);
 static const auto FPS = 60;
 static const auto FRAME_DT = 1.0s / FPS;
-
 
 static std::string generateRandomNameFromBase(const std::string& baseName, size_t numDigits = 4) {
 	std::default_random_engine rng(std::random_device{}());
@@ -86,7 +89,7 @@ static void drawBoundingBox(const BoundingBox& bbox) {
 
 }
 
-static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& filePath) {
+static std::vector<MeshData> loadMeshesFromFile(const std::string& filePath) {
 	Assimp::Importer importer;
 
 	const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs);
@@ -95,7 +98,7 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 		throw std::runtime_error("Issue loading the model: " + filePath);
 	}
 
-	std::vector<std::shared_ptr<Mesh>> meshes;
+	std::vector<MeshData> meshes;
 
 	for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
 		const aiMesh* aiMesh = scene->mMeshes[meshIndex];
@@ -141,8 +144,8 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 			}
 		}
 
-		auto mesh = std::make_shared<Mesh>();
-		mesh->load(vertices.data(), vertices.size(), indices.data(), indices.size());
+		MeshData mesh;
+		mesh.loadData(vertices.data(), vertices.size(), indices.data(), indices.size());
 
 		// Basic Data
 		std::string standarizedName = aiMesh->mName.C_Str();
@@ -151,7 +154,7 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 			standarizedName.replace(index, 1, "_");
 			index++;
 		}
-		mesh->setName(standarizedName);
+		mesh.setMeshDataName(standarizedName);
 
 		glm::mat4 mTransform(1);
 		if (aiMesh->mName != (aiString)"Scene")
@@ -163,21 +166,21 @@ static std::vector<std::shared_ptr<Mesh>> loadMeshesFromFile(const std::string& 
 				mTransform = glm::transpose(glm::make_mat4(&transform.a1));
 			}
 		}
-		mesh->loadModelMatrix(mTransform);
+		mesh.loadModelMatrixData(mTransform);
 
 		if (!texCoords.empty()) {
-			mesh->loadTexCoords(texCoords.data());
+			mesh.loadTexCoordsData(texCoords.data());
 		}
 
 		if (!normals.empty()) {
-			mesh->loadNormals(normals.data());
+			mesh.loadNormalsData(normals.data());
 		}
 
 		if (!colors.empty()) {
-			mesh->loadColors(colors.data());
+			mesh.loadColorsData(colors.data());
 		}
-
-		meshes.push_back(mesh);
+		
+		meshes.push_back(std::move(mesh));
 	}
 
 	return meshes;
@@ -241,61 +244,6 @@ static std::shared_ptr<Image> loadImageFromFile(const std::string& filePath) {
 	return image;
 }
 
-
-static auto MakeTriangleMesh(double size) {
-	const glm::vec3 vertices[] = { glm::vec3(-size, -size, 0), glm::vec3(size, -size, 0), glm::vec3(0, size, 0) };
-	const unsigned int indices[] = { 0, 1, 2 };
-	const glm::vec2 texcoords[] = { glm::vec2(0, 1), glm::vec2(1, 1), glm::vec2(0.5, 0) };
-	const glm::vec3 normals[] = { glm::vec3(0, 0, 1), glm::vec3(0, 0, 1), glm::vec3(0, 0, 1) };
-	const glm::u8vec3 colors[] = { glm::u8vec3(255, 0, 0), glm::u8vec3(0, 255, 0), glm::u8vec3(0, 0, 255) };
-
-	auto mesh_ptr = make_shared<Mesh>();
-	mesh_ptr->load(vertices, 3, indices, 3);
-	mesh_ptr->loadTexCoords(texcoords);
-	mesh_ptr->loadNormals(normals);
-	mesh_ptr->loadColors(colors);
-	return mesh_ptr;
-}
-
-static auto MakeQuadMesh(double size) {
-	const glm::vec3 vertices[4] = { glm::vec3(-size, -size, 0), glm::vec3(size, -size, 0), glm::vec3(size, size, 0), glm::vec3(-size, size, 0) };
-	const unsigned int indices[6] = { 0, 1, 2, 2, 3, 0 };
-	const glm::vec2 texcoords[4] = { glm::vec2(0, 1), glm::vec2(1, 1), glm::vec2(1, 0), glm::vec2(0,0) };
-	const glm::vec3 normals[4] = { glm::vec3(0, 0, 1), glm::vec3(0, 0, 1), glm::vec3(0, 0, 1), glm::vec3(0,0,1) };
-	const glm::u8vec3 colors[4] = { glm::u8vec3(255, 0, 0), glm::u8vec3(0, 255, 0), glm::u8vec3(0, 0, 255), glm::u8vec3(255,255,0) };
-
-	auto mesh_ptr = make_shared<Mesh>();
-	mesh_ptr->load(vertices, 4, indices, 6);
-	mesh_ptr->loadTexCoords(texcoords);
-	mesh_ptr->loadNormals(normals);
-	mesh_ptr->loadColors(colors);
-	return mesh_ptr;
-}
-
-static auto MakeChessTextureImage(int width, int height, int quad_size) {
-	auto image_ptr = make_shared<Image>();
-
-	ifstream file("chess_texture.tex", ios::binary);
-	if (file) file >> (*image_ptr);
-	else {
-		const glm::u8vec3 white = glm::u8vec3(255, 255, 255);
-		const glm::u8vec3 black = glm::u8vec3(0, 0, 0);
-
-		vector<glm::u8vec3> colors(width * height);
-		for (int y = 0; y < height; ++y) {
-			int y_quad = y / quad_size;
-			for (int x = 0; x < width; ++x) {
-				int x_quad = x / quad_size;
-				colors[y * width + x] = (x_quad + y_quad) % 2 ? white : black;
-			}
-		}
-		image_ptr->load(width, height, 3, colors.data());
-		ofstream file("chess_texture.tex", ios::binary);
-		if (file) file << (*image_ptr);
-	}
-	return image_ptr;
-}
-
 static void drawFloorGrid(int size, double step) {
 	glColor3ub(0, 0, 0);
 	glBegin(GL_LINES);
@@ -308,33 +256,33 @@ static void drawFloorGrid(int size, double step) {
 	glEnd();
 }
 
-static void drawDebugInfoForGraphicObject(const GraphicObject& obj) {
+static void drawDebugInfoForGraphicObject(GameObject& obj) {
 	glPushMatrix();
 	glColor3ub(255, 255, 0);
-	drawBoundingBox(obj.boundingBox());
-	glMultMatrixd(obj.transform().data());
+	//drawBoundingBox(obj.boundingBox());
+	glMultMatrixd(obj.GetComponent<Transform>()->data());
 	drawAxis(0.5);
 	glColor3ub(0, 255, 255);
-	drawBoundingBox(obj.localBoundingBox());
+	//drawBoundingBox(obj.localBoundingBox());
 
 	glColor3ub(255, 0, 0);
-	if (obj.hasMesh()) drawBoundingBox(obj.mesh().boundingBox());
+	if (obj.GetComponent<Mesh>()) drawBoundingBox(obj.boundingBox());
 
-	for (const auto& child : obj.children()) drawDebugInfoForGraphicObject(child);
+	for (auto& child : obj.children()) drawDebugInfoForGraphicObject(child);
 	glPopMatrix();
 }
 
-static void drawWorldDebugInfoForGraphicObject(const GraphicObject& obj) {
-	glColor3ub(255, 255, 255);
+static void drawWorldDebugInfoForGraphicObject(GameObject& obj) {
+	/*glColor3ub(255, 255, 255);
 	drawBoundingBox(obj.worldBoundingBox());
-	for (const auto& child : obj.children()) drawWorldDebugInfoForGraphicObject(child);
+	for (auto& child : obj.children()) drawWorldDebugInfoForGraphicObject(child);*/
 }
 
 static void display_func() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixd(&Scene::get().camera.view()[0][0]);
+	glLoadMatrixd(&Scene::get().editorCameraGO.GetComponent<Camera>()->getViewMatrix()[0][0]);
 
 	drawFloorGrid(16, 0.25);
 	Scene::get().scene.draw();
@@ -366,68 +314,88 @@ static void init_opengl() {
 
 static void reshape_func(int width, int height) {
 	glViewport(0, 0, width, height);
-	Scene::get().camera.aspect = static_cast<double>(width) / height;
+	Scene::get().editorCameraGO.GetComponent<Camera>()->aspect = static_cast<double>(width) / height;
 	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixd(&Scene::get().camera.projection()[0][0]);
+	glLoadMatrixd(&Scene::get().editorCameraGO.GetComponent<Camera>()->getProjectionMatrix()[0][0]);
 }
 
-const double moveSpeed = 0.1;
-const float mouseSensitivity = 0.005f;
-static int lastMouseX, lastMouseY;
-static bool firstMouse = true;
 
-static void camera_func(Transform& cameraTransform, const Uint8* keyState, int mouseX, int mouseY, bool rightClickHeld) {
 
-	if (rightClickHeld) {
-		if (firstMouse) {
-			lastMouseX = mouseX;
-			lastMouseY = mouseY;
-			firstMouse = false;
-		}
+static InputManager inputManager;
+static unsigned int camEaseInX;
+static unsigned int camEaseInY;
+static unsigned int camEaseOutX;
+static unsigned int camEaseOutY;
+static vec2 camSpeed = { 2, 2 };
 
-		float deltaX = (mouseX - lastMouseX) * mouseSensitivity;
-		float deltaY = (mouseY - lastMouseY) * mouseSensitivity;
 
-		lastMouseX = mouseX;
-		lastMouseY = mouseY;
-
-		cameraTransform.rotateYawPitch(-deltaX, deltaY);
-
-		if (keyState[SDL_SCANCODE_W]) cameraTransform.translate(cameraTransform.fwd() * -moveSpeed);
-		if (keyState[SDL_SCANCODE_S]) cameraTransform.translate(cameraTransform.fwd() * moveSpeed);
-		if (keyState[SDL_SCANCODE_A]) cameraTransform.translate(cameraTransform.left() * -moveSpeed);
-		if (keyState[SDL_SCANCODE_D]) cameraTransform.translate(cameraTransform.left() * moveSpeed);
+void CameraMovement(GameObject* cam, float deltaTime)
+{
+	if (inputManager.GetMouseButton(SDL_BUTTON_RIGHT) != KEY_REPEAT)
+	{
+		return;
 	}
-	else {
-		firstMouse = true;
+
+	Camera* camera = cam->GetComponent<Camera>();
+	Transform* transform = cam->GetComponent<Transform>();
+	transform->update();
+	double dt = MIN(deltaTime, 0.016);
+	double mouseSensitivity = 28.0;
+
+	camera->yaw = inputManager.GetMouseXMotion() * mouseSensitivity * dt;
+	camera->pitch = -inputManager.GetMouseYMotion() * mouseSensitivity * dt;
+	transform->Rotate(vec3f(0.0f, camera->yaw, 0.0f), true);
+	transform->Rotate(vec3f(camera->pitch, 0.0f, 0.0f));
+
+	bool zeroX = true;
+	bool zeroY = true;
+
+	if (inputManager.GetKey(SDL_SCANCODE_A) == KEY_REPEAT)
+	{
+		camSpeed.x = 20;
+		zeroX = false;
 	}
-}
+	if (inputManager.GetKey(SDL_SCANCODE_D) == KEY_REPEAT)
+	{
+		camSpeed.x = -20;
+		zeroX = false;
+	}
+	if (inputManager.GetKey(SDL_SCANCODE_W) == KEY_REPEAT)
+	{
+		camSpeed.y = 20;
+		zeroY = false;
+	}
+	if (inputManager.GetKey(SDL_SCANCODE_S) == KEY_REPEAT)
+	{
+		camSpeed.y = -20;
+		zeroY = false;
+	}
 
-static void initScene() {
-	auto& triangle = Scene::get().scene.emplaceChild();
-	triangle.transform().pos() = vec3(0, 0, 0);
-	triangle.color() = glm::u8vec3(255, 0, 0);
-	triangle.setName("triangle");
+	if (zeroX) camSpeed.x = 0;
+	if (zeroY) camSpeed.y = 0;
 
-	auto& child_textured_triangle = triangle.emplaceChild();
-	child_textured_triangle.transform().pos() = vec3(2, 0, 0);
-	child_textured_triangle.color() = glm::u8vec3(0, 255, 0);
-	child_textured_triangle.setName("textured_triangle");
+	double shift = inputManager.GetKey(SDL_SCANCODE_LSHIFT) == KEY_REPEAT ? 2 : 1;
+	double speedX = camSpeed.x * shift * dt;
+	double speedY = camSpeed.y * shift * dt;
 
-	auto& child_textured_quad = child_textured_triangle.emplaceChild();
-	child_textured_quad.transform().pos() = vec3(2, 0, 0);
-	child_textured_quad.color() = glm::u8vec3(0, 0, 255);
-	child_textured_quad.setName("child_textured_quad");
+	// Move
+	transform->Translate(speedX * transform->GetRight());
+	transform->Translate(speedY * transform->GetForward());
 
-	auto triangle_mesh = MakeTriangleMesh(0.5);
-	auto quad_mesh = MakeQuadMesh(0.5);
-	auto chess_texture_image = MakeChessTextureImage(64, 64, 8);
+	// (Wheel) Zoom
+	if (inputManager.GetMouseZ() != 0)
+		transform->Translate(transform->GetForward() * (double)inputManager.GetMouseZ() * 4.0);
 
-	triangle.setMesh(triangle_mesh);
-	child_textured_triangle.setMesh(triangle_mesh);
-	child_textured_triangle.setTextureImage(chess_texture_image);
-	child_textured_quad.setMesh(quad_mesh);
-	child_textured_quad.setTextureImage(chess_texture_image);
+	// (F) Focus Selection
+	if (inputManager.GetKey(SDL_SCANCODE_F) == KEY_DOWN && Scene::get().selectedGO)
+	{
+		transform->SetLocalPosition(camera->lookAt);
+		vec3f finalPos;
+		finalPos = transform->GetLocalPosition() - transform->GetForward();
+		finalPos = Scene::get().selectedGO->GetComponent<Transform>()->GetLocalPosition() - (transform->GetForward() * 10.0);
+
+		transform->SetLocalPosition(finalPos);
+	}
 }
 
 int main(int argc, char** argv) {
@@ -438,15 +406,17 @@ int main(int argc, char** argv) {
 
 	MyWindow window("Sofo Engine", WINDOW_SIZE.x, WINDOW_SIZE.y);
 	MyGUI gui(window.windowPtr(), window.contextPtr());
+	inputManager.Init();
 
 	init_opengl();
 
-	// Init camera
-	Scene::get().camera.transform().pos() = vec3(0, 1, 4);
-	Scene::get().camera.transform().rotate(glm::radians(180.0), vec3(0, 1, 0));
-	Scene::get().scene.setName("Scene");
+	Scene::get().Init();
 
-	initScene();
+	// Init editorCamera
+	Transform* editorCameraTransform = Scene::get().editorCameraGO.GetComponent<Transform>();
+	editorCameraTransform->SetLocalPosition(vec3(0, 1, 4));
+	//editorCameraTransform->Rotate(vec3(0, 1 * glm::radians(18.0), 0));
+	Scene::get().scene.setName("Scene");
 
 	bool running = true;
 	const Uint8* keyState = SDL_GetKeyboardState(NULL);
@@ -456,55 +426,53 @@ int main(int argc, char** argv) {
 		const auto t0 = hrclock::now();
 		display_func();
 		reshape_func(WINDOW_SIZE.x, WINDOW_SIZE.y);
+
+		for(auto& event : inputManager.GetSDLEvents())
+			ImGui_ImplSDL2_ProcessEvent(&event);
+
 		gui.Begin();
 		gui.render();
 		gui.End();
 		window.swapBuffers();
+
 		const auto t1 = hrclock::now();
 		const auto dt = t1 - t0;
 		if (dt < FRAME_DT) this_thread::sleep_for(FRAME_DT - dt);
 
-		int mouseX, mouseY;
-		Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
-
-		while (SDL_PollEvent(&e))
+		running = inputManager.PreUpdate(); 
+		if (inputManager.IsFileDropped())
 		{
-			gui.processEvent(e);
-
-			switch (e.type) {
-			case SDL_QUIT:
-				running = false;
-				break;
-			case SDL_DROPFILE:
-				
-				std::filesystem::path file = e.drop.file;
-
-				if (file.extension() == ".obj" || file.extension() == ".OBJ" || file.extension() == ".fbx" || file.extension() == ".FBX") {
-					auto& child = Scene::get().scene.emplaceChild();
-					child.setName(generateRandomNameFromBase(file.filename().string()));
-					for (auto& mesh : loadMeshesFromFile(file.string()))
-					{
-						auto& part = child.emplaceChild();
-						part.setMesh(mesh);
-						//part.setTextureImage(loadImageFromFile("Assets/Baker_house.png"));
-						part.setName(mesh->name());
-						part.setMatrix(mesh->modelMatrix());
-					}
+			std::filesystem::path file = inputManager.GetDropFile();
+			if (file.extension() == ".obj" || file.extension() == ".OBJ" || file.extension() == ".fbx" || file.extension() == ".FBX") {
+				auto& child = Scene::get().scene.emplaceChild();
+				child.AddComponent<Transform>();
+				child.setName(generateRandomNameFromBase(file.filename().string()));
+				for (auto& mesh : loadMeshesFromFile(file.string()))
+				{
+					auto& part = child.emplaceChild();
+					part.AddComponent<Transform>();
+					part.AddComponent<Mesh>(mesh);
+					part.GetComponent<Transform>()->SetLocalTransform(mesh._modelMatrix);
+					part.AddComponent<Texture>();
+					part.setName(mesh._meshName);
 				}
-				else if (file.extension() == ".png") {
-					std::shared_ptr<Image> img = loadImageFromFile(file.string());
+			}
+			else if (file.extension() == ".png") {
+				std::shared_ptr<Image> img = loadImageFromFile(file.string());
 
-					if(Scene::get().selectedGO != nullptr)
-						Scene::get().selectedGO->setTextureImage(img);
+				if (Scene::get().selectedGO != nullptr)
+					Scene::get().selectedGO->GetComponent<Texture>()->setImage(img);
 
-					std::cout << "Texture Filepath: " << file.string() << std::endl;
-				}
-				break;
+				std::cout << "Texture Filepath: " << file.string() << std::endl;
 			}
 		}
 
-		camera_func(Scene::get().camera.transform(), keyState, mouseX, mouseY, mouseState & SDL_BUTTON(SDL_BUTTON_RIGHT));
+		CameraMovement(&Scene::get().editorCameraGO, dt.count());
+
+		Scene::get().scene.update();
+		Scene::get().editorCameraGO.update();
 	}
 
+	inputManager.CleanUp();
 	return 0;
 }

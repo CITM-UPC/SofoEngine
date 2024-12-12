@@ -4,6 +4,8 @@
 #include "InspectorWindow.h"
 #include <imgui.h>
 #include "Utils.h"
+#include "Mesh.h"
+#include "Texture.h"
 
 void InspectorWindow::draw()
 {
@@ -15,20 +17,28 @@ void InspectorWindow::draw()
         return;
     }
 
-    GraphicObject& selectedGO = *Scene::get().selectedGO;
+	if (savedSelectedGO != Scene::get().selectedGO)
+	{
+		OnSelectGO();
+		savedSelectedGO = Scene::get().selectedGO;
+	}
 
+    GameObject& selectedGO = *Scene::get().selectedGO;
+
+
+    Transform* transform = selectedGO.GetComponent<Transform>();
     if (ImGui::Begin(name.c_str()))
     {
         ImGui::Text("Selected GameObject: %s", selectedGO.getName().c_str());
         ImGui::Separator();
 
-        if (ImGui::CollapsingHeader("Transform")) {
+        if (transform != nullptr && ImGui::CollapsingHeader("Transform")) {
             ImGui::SetItemTooltip("Displays and sets game object transformations");
 
-            view_pos = selectedGO.transform().pos();
+            view_pos = transform->GetLocalPosition();
             view_rot_deg = ToDegrees(view_rot_rad);
             //vec3f initialRotation = view_rot_deg;
-            view_sca = selectedGO.transform().scale();
+            view_sca = transform->GetLocalScale();
 
 
             // Transform table ----------------------------------------------------------------------------------
@@ -65,9 +75,9 @@ void InspectorWindow::draw()
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0.5f, 0.32f, 0.32f, 1.0f });
                 ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0.6f, 0.42f, 0.42f, 1.0f });
                 ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0.5f, 0.22f, 0.22f, 1.0f });
-                if (ImGui::DragFloat("X##PosX", &view_pos.x, 0.5F, 0, 0, "%.3f"));
-                if (ImGui::DragFloat("X##RotX", &view_rot_deg.x, 0.2f, 0, 0, "%.3f"));
-                if (ImGui::DragFloat("X##ScaleX", &view_sca.x, 0.1F, 0, 0, "%.3f"));
+                if (ImGui::DragFloat("X##PosX", &view_pos.x, 0.5F, 0, 0, "%.3f"))       matrixChanged = true;
+                if (ImGui::DragFloat("X##RotX", &view_rot_deg.x, 0.2f, 0, 0, "%.3f"))   matrixChanged = true;
+                if (ImGui::DragFloat("X##ScaleX", &view_sca.x, 0.1F, 0, 0, "%.3f"))     matrixChanged = true;
                 ImGui::PopStyleColor(3);
 
                 // Column 2: Y Axis
@@ -75,9 +85,9 @@ void InspectorWindow::draw()
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0.32f, 0.5f, 0.32f, 1.0f });
                 ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0.42f, 0.6f, 0.42f, 1.0f });
                 ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0.22f, 0.5f, 0.22f, 1.0f });
-                if (ImGui::DragFloat("Y##PosY", &view_pos.y, 0.5F, 0, 0, "%.3f"));
-                if (ImGui::DragFloat("Y##RotY", &view_rot_deg.y, 0.2f, 0, 0, "%.3f"));
-                if (ImGui::DragFloat("Y##ScaleY", &view_sca.y, 0.1F, 0, 0, "%.3f"));
+                if (ImGui::DragFloat("Y##PosY", &view_pos.y, 0.5F, 0, 0, "%.3f"))       matrixChanged = true;
+                if (ImGui::DragFloat("Y##RotY", &view_rot_deg.y, 0.2f, 0, 0, "%.3f"))   matrixChanged = true;
+                if (ImGui::DragFloat("Y##ScaleY", &view_sca.y, 0.1F, 0, 0, "%.3f"))     matrixChanged = true;
                 ImGui::PopStyleColor(3);
 
                 // Column 3: Z Axis
@@ -85,62 +95,75 @@ void InspectorWindow::draw()
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, { 0.32f, 0.32f, 0.5f, 1.0f });
                 ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, { 0.42f, 0.42f, 0.6f, 1.0f });
                 ImGui::PushStyleColor(ImGuiCol_FrameBgActive, { 0.22f, 0.22f, 0.5f, 1.0f });
-                if (ImGui::DragFloat("Z##PosZ", &view_pos.z, 0.5F, 0, 0, "%.3f"));
-                if (ImGui::DragFloat("Z##RotZ", &view_rot_deg.z, 0.2f, 0, 0, "%.3f"));
-                if (ImGui::DragFloat("Z##ScaleZ", &view_sca.z, 0.1F, 0, 0, "%.3f"));
+                if (ImGui::DragFloat("Z##PosZ", &view_pos.z, 0.5F, 0, 0, "%.3f"))       matrixChanged = true;
+                if (ImGui::DragFloat("Z##RotZ", &view_rot_deg.z, 0.2f, 0, 0, "%.3f"))   matrixChanged = true;
+                if (ImGui::DragFloat("Z##ScaleZ", &view_sca.z, 0.1F, 0, 0, "%.3f"))     matrixChanged = true;
                 ImGui::PopStyleColor(3);
 
                 ImGui::EndTable();
-                /*const auto& position = selectedGO.transform().pos();
-                const auto& rotation = selectedGO.transform().rotation();
-                const auto& scale = selectedGO.transform().scale();
 
-                ImGui::Text("Position: (%.2f, %.2f, %.2f)", position.x, position.y, position.z);
-                ImGui::Text("Rotation: (%.2f, %.2f, %.2f)", rotation.x, rotation.y, rotation.z);
-                ImGui::Text("Scale: (%.2f, %.2f, %.2f)", scale.x, scale.y, scale.z);*/
-            }
-
-            if (selectedGO.hasMesh() && ImGui::CollapsingHeader("Mesh"))
-            {
-                const Mesh& mesh = selectedGO.mesh();
-
-                ImGui::Text("Mesh vertices: %zu", mesh.vertices());
-                ImGui::Text("Mesh indices: %zu", mesh.indices());
-
-                static bool showTriangleNormals = false;
-                static bool showFaceNormals = false;
-                ImGui::Checkbox("Show triangle normals", &showTriangleNormals);
-                ImGui::Checkbox("Show face normals", &showFaceNormals);
-
-                if (showTriangleNormals)
+                if (matrixChanged)
                 {
-                    mesh.drawTriangleNormals();
-                }
-                if (showFaceNormals)
-                {
-                    mesh.drawFaceNormals();
+                    transform->SetLocalPosition(view_pos);
+                    view_rot_rad = ToRadians(view_rot_deg);
+                    transform->SetLocalRotation(view_rot_rad);
+
+                    transform->SetLocalScale(view_sca);
                 }
             }
+        }
 
-            if (selectedGO.hasTexture() && ImGui::CollapsingHeader("Texture"))
+        Mesh* mesh = selectedGO.GetComponent<Mesh>();
+        if (mesh != nullptr && ImGui::CollapsingHeader("Mesh"))
+        {
+
+            ImGui::Text("Mesh vertices: %zu", mesh->vertices().size());
+            ImGui::Text("Mesh indices: %zu", mesh->indices().size());
+
+            static bool showTriangleNormals = true;
+            static bool showFaceNormals = true;
+            ImGui::Checkbox("Show triangle normals", &showTriangleNormals);
+            ImGui::Checkbox("Show face normals", &showFaceNormals);
+
+            if (showTriangleNormals)
             {
-                const Texture& texture = selectedGO.texture();
+                mesh->drawTriangleNormals();
+            }
+            if (showFaceNormals)
+            {
+                mesh->drawFaceNormals();
+            }
+        }
 
-                ImGui::Text("Texture size: %dx%d", texture.image().width(), texture.image().height());
+        Texture* texture = selectedGO.GetComponent<Texture>();
+        if (texture != nullptr && ImGui::CollapsingHeader("Texture"))
+        {
+            if (&texture->image() == nullptr)
+            {
+                ImGui::Text("No texture loaded.");
+            }
+            else
+            {
+                ImGui::Text("Texture size: %dx%d", texture->image().width(), texture->image().height());
+            }
 
-                static bool useCheckerTexture = false;
-                ImGui::Checkbox("Use checker texture", &useCheckerTexture);
+            static bool useCheckerTexture = false;
+            ImGui::Checkbox("Use checker texture", &useCheckerTexture);
 
-                if (useCheckerTexture)
-                {
-                    selectedGO.texture().applyCheckerTexture();
-                }
-                else
-                {
-                    selectedGO.texture().applyOriginalTexture();
-                }
+            if (useCheckerTexture || !texture->hasTexture())
+            {
+                texture->applyCheckerTexture();
+            }
+            else
+            {
+                texture->applyOriginalTexture();
             }
         }
         ImGui::End();
     }
+}
+
+void InspectorWindow::OnSelectGO()
+{
+    view_rot_rad = Scene::get().selectedGO->GetComponent<Transform>()->GetRotationEuler();
 }

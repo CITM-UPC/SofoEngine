@@ -3,59 +3,78 @@
 #include "types.h"
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
+#include "Component.h"
 
-class Transform {
+class GameObject;
 
-	union {
-		mat4 _mat = mat4(1.0);
-		struct {
-			vec3 _left; mat4::value_type _left_w;
-			vec3 _up; mat4::value_type _up_w;
-			vec3 _fwd; mat4::value_type _fwd_w;
-			vec3 _pos; mat4::value_type _pos_w;
-		};
-	};
+class Transform : public Component {
 
-	double yaw = 0.0;
-	double pitch = 0.0;
+	mat4 localTransformMatrix;
+	vec3 localPosition;
+	quat localRotation;
+	vec3 localScale;
+
+	mat4 globalTransformMatrix;
+	vec3 globalPosition;
+	quat globalRotation;
+	vec3 globalScale;
 
 public:
-	const auto& mat() const { return _mat; }
-	const auto& left() const { return _left; }
-	const auto& up() const { return _up; }
-	const auto& fwd() const { return _fwd; }
-	const auto& pos() const { return _pos; }
-	auto& pos() { return _pos; }
 
-	const auto* data() const { return &_mat[0][0]; }
+	Transform(GameObject* containerGO);
+	Transform(GameObject* containerGO, Transform* ref);
+	virtual ~Transform();
+	
+	void update() override;
 
-	Transform() = default;
-	Transform(const mat4& mat) : _mat(mat) {}
+	const auto* data() const { return &localTransformMatrix[0][0]; }
+
+	void Translate(const vec3& translation);
+	void SetLocalPosition(const vec3& newPosition);
+	void SetGlobalPosition(const vec3& newPosition);
+
+	void Rotate(const vec3& eulerAngles, bool global = false);
+	void SetLocalRotation(const vec3& eulerAngles);
+	void SetGlobalRotation(const vec3& eulerAngles);
+
+	void Scale(const vec3& scaleFactors);
+	void SetLocalScale(const vec3& newScale);
+	void SetGlobalScale(const vec3& newScale);
+
+	vec3 GetGlobalForward() const;
+	vec3 GetGlobalUp() const;
+	vec3 GetGlobalRight() const;
+	vec3 GetForward() const;
+	vec3 GetUp() const;
+	vec3 GetRight() const;
+
+	void SetRight(vec3 newRight);
+	void SetUp(vec3 newUp);
+	void SetForward(vec3 newForward);
+
+	vec3 GetGlobalPosition() const;
+	quat GetGlobalRotation() const;
+	vec3 GetGlobalScale() const;
+	vec3 GetLocalPosition() const;
+	quat GetLocalRotation() const;
+	vec3 GetLocalScale() const;
+
+	mat4 GetLocalTransform() const;
+	mat4 GetLocalTransform();
+	void SetLocalTransform(mat4 transform);
+	mat4 GetGlobalTransform() const;
+	mat4 GetGlobalTransform();
+	void SetGlobalTransform(mat4 transform);
+
+	vec3 GetRotationEuler() const;
 
 
-	void translate(const vec3& v);
-	void rotate(double rads, const vec3& v);
-	void rotateYawPitch(double deltaYaw, double deltaPitch);
-
-	void setMatrix(const mat4& mat) { _mat = mat; }
-
-	void lookAt(double yawOffset, double pitchOffset);
-
-	glm::vec3 scale() const {
-		return glm::vec3(glm::length(_left), glm::length(_up), glm::length(_fwd));
-	}
-
-	glm::quat rotation() const {
-		glm::mat3 rotationMatrix(
-			glm::normalize(_left),
-			glm::normalize(_up),
-			glm::normalize(_fwd)
-		);
-		return glm::quat_cast(rotationMatrix);
-	}
-
-	Transform operator*(const mat4& other) { return Transform(_mat * other); }
-	Transform operator*(const Transform& other) { return Transform(_mat * other._mat); }
+	void DecomposeTransform();
+	void DecomposeGlobalTransform();
+	mat4 CalculateWorldTransform();
+	void UpdateCameraIfPresent();
+	//Transform operator*(const mat4& other) { return Transform(globalTransformMatrix * other); }
+	//Transform operator*(const Transform& other) { return Transform(globalTransformMatrix * other.globalTransformMatrix); }
 };
 
-inline Transform operator*(const mat4& m, const Transform& t) { return Transform(m * t.mat()); }
+//inline Transform operator*(const mat4& m, const Transform& t) { return Transform(m * t.globalTransformMatrix()); }

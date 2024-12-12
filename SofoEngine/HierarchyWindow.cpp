@@ -34,9 +34,9 @@ void HierarchyWindow::draw()
 
 }
 
-void HierarchyWindow::RecurseShowChildren(GraphicObject& parent)
+void HierarchyWindow::RecurseShowChildren(GameObject& parent)
 {
-	for (GraphicObject& childGO : parent.children())
+	for (GameObject& childGO : parent.children())
 	{
 		unsigned int treeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
 
@@ -105,7 +105,7 @@ void HierarchyWindow::RecurseShowChildren(GraphicObject& parent)
 }
 
 
-void HierarchyWindow::ContextMenu(GraphicObject& go)
+void HierarchyWindow::ContextMenu(GameObject& go)
 {
 	if (ImGui::BeginPopupContextItem())
 	{
@@ -119,19 +119,17 @@ void HierarchyWindow::ContextMenu(GraphicObject& go)
 		{
 			duplicate = true;
 			Scene::get().selectedGO = &Scene::get().Duplicate(go);
-			//LOG(LogType::LOG_INFO, "%s has been duplicated", go.get()->GetName().c_str());
 		}
 
 		//if (ImGui::MenuItem("Remove"))
 		//{
 		//	remove = true;
-		//	//LOG(LogType::LOG_INFO, "Use Count: %d", go.use_count());
 		//	engine->N_sceneManager->SetSelectedGO(nullptr);
 
 		//	toDeleteList.push_back(go);
 
-		//	//go.get()->Delete();
-		//	//go.get()->Disable();
+		//	//go->Delete();
+		//	//go->Disable();
 		//}
 
 		ImGui::EndPopup();

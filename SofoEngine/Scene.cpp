@@ -1,7 +1,7 @@
 #include "Scene.h"
 #include <unordered_set>
 
-std::string Scene::GenerateUniqueName(const std::string& baseName, const GraphicObject* go)
+std::string Scene::GenerateUniqueName(const std::string& baseName, const GameObject* go)
 {
 	std::unordered_set<std::string> existingNames;
 	std::string newName = baseName;
@@ -33,7 +33,21 @@ std::string Scene::GenerateUniqueName(const std::string& baseName, const Graphic
 	return newName;
 }
 
-void Scene::Reparent(GraphicObject& originalGO, GraphicObject& newParentGO)
+void Scene::Init()
+{
+	scene.setName("Scene");
+	scene.AddComponent<Transform>();
+	editorCameraGO.AddComponent<Transform>();
+	editorCameraGO.AddComponent<Camera>();
+	editorCameraGO.setName("Editor Camera");
+	editorCamera = editorCameraGO.GetComponent<Camera>();
+}
+
+void Scene::Shutdown()
+{
+}
+
+void Scene::Reparent(GameObject& originalGO, GameObject& newParentGO)
 {
 	//for (auto& go : originalGO.parent().children())
 	//{
@@ -57,16 +71,20 @@ void Scene::Reparent(GraphicObject& originalGO, GraphicObject& newParentGO)
 	//}
 }
 
-GraphicObject& Scene::CreateEmpty(std::string name)
+GameObject& Scene::CreateEmpty(std::string name)
 {
-	GraphicObject& empty = scene.emplaceChild();
+	GameObject& empty = scene.emplaceChild();
 	empty.setName(GenerateUniqueName(name));
+	empty.AddComponent<Transform>();
 	return empty;
 }
 
-GraphicObject& Scene::Duplicate(GraphicObject& originalGO)
+GameObject& Scene::Duplicate(GameObject& originalGO)
 {
-	GraphicObject duplicate(originalGO);
+	GameObject duplicate = originalGO.Clone();
 	duplicate.setName(GenerateUniqueName(originalGO.getName(), &originalGO));
-	originalGO.parent().emplaceChild(duplicate);
+
+	originalGO.parent().emplaceChild(std::move(duplicate));
+
+	return duplicate;
 }

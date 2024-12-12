@@ -12,8 +12,9 @@ public:
 	bool isLoaded() const { return _id != 0; }
 
 	BufferObject() = default;
-	BufferObject(const BufferObject&) = delete;
-	BufferObject& operator=(const BufferObject&) = delete;
+	BufferObject(BufferObject&);
+	BufferObject& operator=(BufferObject&);
+	BufferObject& operator=(const BufferObject&);
 	BufferObject(BufferObject&& other) noexcept;
 	BufferObject& operator=(BufferObject&& other) noexcept = delete;
 	~BufferObject();

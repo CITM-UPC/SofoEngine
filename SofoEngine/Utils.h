@@ -21,3 +21,6 @@ inline T ToDegrees(const T radians)
 {
     return RADTODEG * radians;
 }
+
+#define MIN( a, b ) ( ((a) < (b)) ? (a) : (b) )
+#define MAX( a, b ) ( ((a) > (b)) ? (a) : (b) )

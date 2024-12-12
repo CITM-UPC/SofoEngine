@@ -1,6 +1,22 @@
 #include "BufferObject.h"
 #include <GL/glew.h>
 
+BufferObject::BufferObject(BufferObject& other) : _id(other._id), _target(other._target) {}
+
+BufferObject& BufferObject::operator=(BufferObject& other)
+{
+	_id = other._id;
+	_target = other._target;
+	return *this;
+}
+
+BufferObject& BufferObject::operator=(const BufferObject& other)
+{
+	_id = other._id;
+	_target = other._target;
+	return *this;
+}
+
 BufferObject::BufferObject(BufferObject&& other) noexcept : _id(other._id), _target(other._target) {
 	other._id = 0;
 }
@@ -30,5 +46,4 @@ void BufferObject::unload() {
 }
 
 BufferObject::~BufferObject() {
-	unload();
 }
